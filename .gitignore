@@ -1,0 +1,12 @@
+# Entorno virtual
+.venv/
+
+# Archivos de cache de Python
+__pycache__/
+*.pyc
+
+# Logs y artefactos de MLflow
+mlruns/
+
+# Modelos guardados localmente
+*.pkl

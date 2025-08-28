@@ -1,8 +1,0 @@
-channels:
-- conda-forge
-dependencies:
-- pip<=25.1
-- pip:
-  - mlflow==2.10.0
-  - pycaret==3.3.2
-name: insurance_cost_prediction-env
