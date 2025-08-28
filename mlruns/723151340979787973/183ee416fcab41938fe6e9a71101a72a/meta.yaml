@@ -1,0 +1,15 @@
+artifact_uri: file:///C:/Users/fabri/Desktop/proyecto-mlops/mlruns/723151340979787973/183ee416fcab41938fe6e9a71101a72a/artifacts
+end_time: 1756413377491
+entry_point_name: ''
+experiment_id: '723151340979787973'
+lifecycle_stage: active
+run_id: 183ee416fcab41938fe6e9a71101a72a
+run_name: Passive Aggressive Regressor
+run_uuid: 183ee416fcab41938fe6e9a71101a72a
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1756413377327
+status: 3
+tags: []
+user_id: fabri

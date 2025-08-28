@@ -1,0 +1,15 @@
+artifact_uri: file:///C:/Users/fabri/Desktop/proyecto-mlops/mlruns/723151340979787973/7608585a5cfa4a5c889e12a5c6f9acee/artifacts
+end_time: 1756413379338
+entry_point_name: ''
+experiment_id: '723151340979787973'
+lifecycle_stage: active
+run_id: 7608585a5cfa4a5c889e12a5c6f9acee
+run_name: Gradient Boosting Regressor
+run_uuid: 7608585a5cfa4a5c889e12a5c6f9acee
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1756413379187
+status: 3
+tags: []
+user_id: fabri

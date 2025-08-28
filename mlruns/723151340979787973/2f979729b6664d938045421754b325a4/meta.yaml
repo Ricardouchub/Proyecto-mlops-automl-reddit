@@ -1,0 +1,15 @@
+artifact_uri: file:///C:/Users/fabri/Desktop/proyecto-mlops/mlruns/723151340979787973/2f979729b6664d938045421754b325a4/artifacts
+end_time: 1756413374254
+entry_point_name: ''
+experiment_id: '723151340979787973'
+lifecycle_stage: active
+run_id: 2f979729b6664d938045421754b325a4
+run_name: Light Gradient Boosting Machine
+run_uuid: 2f979729b6664d938045421754b325a4
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1756413374080
+status: 3
+tags: []
+user_id: fabri

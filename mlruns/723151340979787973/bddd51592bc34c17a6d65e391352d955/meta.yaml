@@ -1,0 +1,15 @@
+artifact_uri: file:///C:/Users/fabri/Desktop/proyecto-mlops/mlruns/723151340979787973/bddd51592bc34c17a6d65e391352d955/artifacts
+end_time: 1756413374872
+entry_point_name: ''
+experiment_id: '723151340979787973'
+lifecycle_stage: active
+run_id: bddd51592bc34c17a6d65e391352d955
+run_name: AdaBoost Regressor
+run_uuid: bddd51592bc34c17a6d65e391352d955
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1756413374731
+status: 3
+tags: []
+user_id: fabri

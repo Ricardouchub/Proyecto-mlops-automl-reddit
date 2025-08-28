@@ -1,0 +1,15 @@
+artifact_uri: file:///C:/Users/fabri/Desktop/proyecto-mlops/mlruns/723151340979787973/5147ca13f5df40218cd91368f8d74f4c/artifacts
+end_time: 1756413378701
+entry_point_name: ''
+experiment_id: '723151340979787973'
+lifecycle_stage: active
+run_id: 5147ca13f5df40218cd91368f8d74f4c
+run_name: Dummy Regressor
+run_uuid: 5147ca13f5df40218cd91368f8d74f4c
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1756413378557
+status: 3
+tags: []
+user_id: fabri

@@ -1,0 +1,15 @@
+artifact_uri: file:///C:/Users/fabri/Desktop/proyecto-mlops/mlruns/723151340979787973/a336190ae03f4728b06bf0b7191c4b9d/artifacts
+end_time: 1756413376903
+entry_point_name: ''
+experiment_id: '723151340979787973'
+lifecycle_stage: active
+run_id: a336190ae03f4728b06bf0b7191c4b9d
+run_name: Huber Regressor
+run_uuid: a336190ae03f4728b06bf0b7191c4b9d
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1756413376756
+status: 3
+tags: []
+user_id: fabri
