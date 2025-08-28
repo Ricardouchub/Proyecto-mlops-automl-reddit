@@ -1,12 +1,6 @@
-# --- Librerías Principales ---
-# Las instalamos directamente para nuestro proyecto.
-
 pandas
 pycaret
 mlflow==2.10.0
-
-# --- Librerías para la Interfaz (las usaremos después) ---
-# Las añadimos ahora para no tener que actualizar el archivo luego.
-
 fastapi
 uvicorn
+gradio
