@@ -31,4 +31,4 @@ jobs:
 
     # 4. Ejecuta el script de entrenamiento
     - name: Ejecutar script de entrenamiento
-      run: python train.py
+      run: python python_train.py
