@@ -10,3 +10,6 @@ mlruns/
 
 # Modelos guardados localmente
 *.pkl
+
+# 
+.env
