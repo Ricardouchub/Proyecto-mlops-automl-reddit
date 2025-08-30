@@ -1,14 +1,23 @@
+# Core de MLOps y Datos
 pandas
+pycaret
+mlflow==2.10.0
+
+# API de Reddit
 praw
 python-dotenv
-# --- Librerías de NLP ---
+
+# NLP y Modelos
 transformers
 torch
+torchvision
+torchaudio
 sentencepiece
-# Para Modelado de Tópicos
 gensim
 nltk
-# --- Librerías de Visualización ---
+
+# Visualización y App
 gradio
 plotly
 wordcloud
+matplotlib
