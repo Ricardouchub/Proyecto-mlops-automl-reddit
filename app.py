@@ -1,150 +1,132 @@
 import gradio as gr
 import pandas as pd
+import plotly.express as px
 from pycaret.classification import load_model, predict_model
-import shap
-import matplotlib.pyplot as plt
-import io
-import base64
+import os
+import ast
 
-# Load the pipeline and extract the model
-pipeline = load_model('churn_model')
-model = pipeline.steps[-1][1]
+# --- 1. Definición de Rutas ---
+DATA_FOLDER = "data"
+MODELS_FOLDER = "models"
+PROCESSED_DATA_PATH = os.path.join(DATA_FOLDER, "processed_reddit_data.csv")
+AUTOML_MODEL_PATH = os.path.join(MODELS_FOLDER, "sentiment_model_v2")
 
-# Initialize SHAP Explainer
-explainer = shap.TreeExplainer(model)
+# --- 2. Carga de Datos y Modelos ---
+df_roberta = pd.DataFrame()
+df_automl_predictions = pd.DataFrame()
+automl_model_info_str = "El modelo de AutoML no se pudo cargar. Ejecuta python_train.py."
 
-# Prediction Function
-def predict(gender, age, tenure, usage_frequency, support_calls, payment_delay,
-            subscription_type, contract_length, total_spend, last_interaction):
+try:
+    df_roberta = pd.read_csv(PROCESSED_DATA_PATH)
+except Exception as e:
+    print(f"Advertencia: No se pudo cargar '{PROCESSED_DATA_PATH}'. {e}")
+
+try:
+    automl_model_pipeline = load_model(AUTOML_MODEL_PATH)
+    automl_model_info_str = f"Mejor modelo encontrado por AutoML: <pre>{str(automl_model_pipeline.steps[-1][1])}</pre>"
     
-    # Define the schema and create the DataFrame
-    input_data = {
-        'Gender': [gender], 'Age': [age], 'Tenure': [tenure], 
-        'Usage Frequency': [usage_frequency], 'Support Calls': [support_calls],
-        'Payment Delay': [payment_delay], 'Subscription Type': [subscription_type],
-        'Contract Length': [contract_length], 'Total Spend': [total_spend],
-        'Last Interaction': [last_interaction]
-    }
-    schema = {
-        'Gender': 'object', 'Age': 'int64', 'Tenure': 'int64',
-        'Usage Frequency': 'int64', 'Support Calls': 'int64',
-        'Payment Delay': 'int64', 'Subscription Type': 'object',
-        'Contract Length': 'object', 'Total Spend': 'float64',
-        'Last Interaction': 'int64'
-    }
-    input_df = pd.DataFrame(input_data).astype(schema)
+    if not df_roberta.empty:
+        print("Generando predicciones con el modelo AutoML...")
+        data_for_automl = df_roberta[['text', 'brand']]
+        predictions_automl = predict_model(automl_model_pipeline, data=data_for_automl)
+        
+        # Unimos las predicciones de AutoML con las emociones detectadas por RoBERTa para una comparación completa
+        df_automl_predictions = predictions_automl.rename(columns={'prediction_label': 'sentiment'})
+        df_automl_predictions['emotion'] = df_roberta['emotion'] # Añadir columna de emoción
+        print("Predicciones de AutoML generadas y enriquecidas.")
 
-    # Use the pipeline to get predictions with raw scores
-    predictions = predict_model(pipeline, data=input_df, raw_score=True)
+except Exception as e:
+    print(f"Advertencia: No se pudo cargar o usar el modelo AutoML. {e}")
+
+# --- 3. Funciones de la App ---
+def create_sentiment_plot(data, brand_name, model_type):
+    if data.empty or 'sentiment' not in data.columns:
+        return px.pie(title=f"Sin Datos para {brand_name} ({model_type})")
+    sentiment_counts = data['sentiment'].value_counts()
+    fig = px.pie(sentiment_counts, values=sentiment_counts.values, names=sentiment_counts.index, 
+                 title=f"Sentimiento para {brand_name} ({model_type})", color=sentiment_counts.index,
+                 color_discrete_map={'Positive':'#2ca02c', 'Negative':'#d62728', 'Neutral':'#7f7f7f'})
+    return fig
+
+def create_emotion_plot(data, brand_name, title_suffix=""):
+    if data.empty or 'emotion' not in data.columns:
+        return px.bar(title=f"Sin Datos de Emociones para {brand_name}")
+    emotion_counts = data['emotion'].value_counts().nlargest(7)
+    fig = px.bar(emotion_counts, x=emotion_counts.index, y=emotion_counts.values, 
+                 title=f"Top Emociones Detectadas {title_suffix}", labels={'x':'Emoción', 'y':'Cantidad'})
+    return fig
+
+def update_dashboard(df_source, brand_filter, sentiment_filter):
+    if df_source.empty: return None, None, None, pd.DataFrame()
     
-    # Select the probability for the 'Churn' class (class 1)
-    churn_probability = predictions.loc[0, 'prediction_score_1']
-    
-    if churn_probability >= 0.5:
-        prediction_text = f"<p style='color:red; font-size:1.5em; font-weight:bold;'>¡Alto Riesgo de Fuga ({churn_probability:.2%})!</p>"
+    filtered = df_source.copy()
+    if sentiment_filter != "Todos": filtered = filtered[filtered['sentiment'] == sentiment_filter]
+
+    if brand_filter == "Ambas":
+        intel_df = filtered[filtered['brand'] == 'Intel']
+        amd_df = filtered[filtered['brand'] == 'AMD']
+        intel_plot = create_sentiment_plot(intel_df, "Intel", "RoBERTa" if 'emotion' in df_source.columns else "AutoML")
+        amd_plot = create_sentiment_plot(amd_df, "AMD", "RoBERTa" if 'emotion' in df_source.columns else "AutoML")
+        emotion_plot = create_emotion_plot(filtered, "Ambas Marcas", "(RoBERTa)")
+        
+        return intel_plot, amd_plot, emotion_plot, filtered.head(100)
     else:
-        prediction_text = f"<p style='color:green; font-size:1.5em; font-weight:bold;'>Bajo Riesgo de Fuga ({churn_probability:.2%})</p>"
-    
-    confianza = f"<p style='text-align:center; font-size:1.1em;'>Probabilidad calculada por el modelo.</p>"
+        brand_df = filtered[filtered['brand'] == brand_filter]
+        brand_plot = create_sentiment_plot(brand_df, brand_filter, "RoBERTa" if 'emotion' in df_source.columns else "AutoML")
+        emotion_plot = create_emotion_plot(brand_df, brand_filter, f"({brand_filter} - RoBERTa)")
+        return brand_plot, brand_plot, emotion_plot, brand_df.head(100)
 
-    # SHAP Graph Generation
-    try:
-        transformed_df = pipeline[:-1].transform(input_df)
-        shap_values = explainer.shap_values(transformed_df)
-        
-        if isinstance(shap_values, list):
-            shap_values_for_plot = shap_values[1][0]
-            base_value_for_plot = explainer.expected_value[1]
-        else:
-            shap_values_for_plot = shap_values[0]
-            base_value_for_plot = explainer.expected_value
+# --- 4. Interfaz de Gradio ---
+custom_theme = gr.themes.Base(font=[gr.themes.GoogleFont("Inter"), "Arial", "sans-serif"]).set(
+    body_background_fill="#f0f2f5", block_background_fill="white", block_border_width="1px",
+    block_shadow="*shadow_drop_lg", button_primary_background_fill="#00a3c0",
+    button_primary_background_fill_hover="#00839c", button_primary_text_color="white",
+)
+custom_css = "h1 { color: #2c3e50; text-align: center; font-weight: 700; } h3 { color: #333d4d; font-weight: 600; } p { color: #5d6776; text-align: center; }"
 
-        plt.figure(figsize=(2, 2))
+with gr.Blocks(theme=custom_theme, css=custom_css, title="Dashboard Comparativo: Intel vs AMD") as demo:
+    gr.Markdown("<h1>Dashboard Comparativo: Intel vs AMD en Reddit</h1>")
 
-
-        shap.waterfall_plot(
-            shap.Explanation(
-                values=shap_values_for_plot,
-                base_values=base_value_for_plot,
-                data=transformed_df.iloc[0],
-                feature_names=transformed_df.columns.tolist()
-            ),
-            show=False
-        )
-        
-        buffer = io.BytesIO()
-        plt.tight_layout()
-        plt.savefig(buffer, format='png', bbox_inches='tight')
-        plt.close()
-        image_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
-        shap_plot = f"<img src='data:image/png;base64,{image_base64}' style='width:100%; height:auto;'/>"
-
-    except Exception as e:
-        shap_plot = f"<p style='color:red;'>Error al generar gráfico SHAP: {e}</p>"
-        print(f"SHAP Error: {e}")
-        
-    return prediction_text, confianza, shap_plot
-
-# --- Custom CSS and Gradio UI Layout ---
-custom_css = """
-body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f2f5; }
-.gradio-container { box-shadow: 0 4px 8px rgba(0,0,0,0.1); border-radius: 12px; overflow: hidden; }
-h1 { color: #2c3e50; text-align: center; font-weight: bold; margin-bottom: 20px; }
-p { color: #555; text-align: center; font-size: 1.1em; }
-.gr-button.primary { background-color: #3498db; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-size: 1.1em; transition: background-color 0.3s ease; }
-.gr-button.primary:hover { background-color: #2980b9; }
-"""
-
-with gr.Blocks(theme=gr.themes.Soft(), title="Predicción de Fuga de Clientes", css=custom_css) as demo:
-    gr.Markdown(
-        """
-        <h1>📈 Predicción de Fuga de Clientes (Churn)</h1>
-        <p>Introduce los datos de un cliente para predecir su riesgo de cancelar la suscripción y entender los factores clave detrás de la predicción.</p>
-        """
-    )
-    
-    # --- CAMBIO: Reorganización en dos columnas principales ---
-    with gr.Row():
-        # --- Columna Izquierda: Entradas del Usuario ---
-        with gr.Column(scale=1):
-            gr.Markdown("<h3>Datos del Cliente</h3>")
-            gender = gr.Radio(["Male", "Female"], label="Género")
-            age = gr.Slider(minimum=18, maximum=70, step=1, label="Edad")
-            tenure = gr.Slider(minimum=0, maximum=60, step=1, label="Antigüedad (meses)")
-            usage_frequency = gr.Slider(minimum=1, maximum=30, step=1, label="Frecuencia de Uso (días/mes)")
-            support_calls = gr.Slider(minimum=0, maximum=10, step=1, label="Llamadas a Soporte")
-            payment_delay = gr.Slider(minimum=0, maximum=30, step=1, label="Retraso en Pagos (días)")
-            subscription_type = gr.Dropdown(["Basic", "Standard", "Premium"], label="Tipo de Suscripción")
-            contract_length = gr.Dropdown(["Monthly", "Quarterly", "Annual"], label="Duración del Contrato")
-            total_spend = gr.Number(label="Gasto Total ($)")
-            last_interaction = gr.Slider(minimum=1, maximum=30, step=1, label="Última Interacción (días)")
+    with gr.Tabs():
+        # --- Pestaña 1: Resultados con AutoML (Nuestro Modelo) ---
+        with gr.TabItem("Resultados con AutoML (Nuestro Modelo)"):
+            gr.Markdown("<p>Análisis utilizando nuestro modelo propio, entrenado con AutoML. Permite comparar su rendimiento con el modelo experto.</p>")
+            with gr.Row():
+                brand_filter_automl = gr.Dropdown(choices=["Ambas", "Intel", "AMD"], value="Ambas", label="Filtrar por Marca")
+                sentiment_filter_automl = gr.Dropdown(choices=["Todos"] + (df_automl_predictions['sentiment'].unique().tolist() if not df_automl_predictions.empty else []), value="Todos", label="Filtrar por Sentimiento")
+            with gr.Row():
+                intel_automl_plot = gr.Plot()
+                amd_automl_plot = gr.Plot()
+            with gr.Row():
+                emotion_automl_plot = gr.Plot()
+            gr.Markdown("<h3>Vista Previa de Comentarios</h3>")
+            comments_automl = gr.DataFrame(headers=["Marca", "Comentario", "Sentimiento (AutoML)", "Emoción (RoBERTa)"], wrap=True)
             
-            predict_btn = gr.Button("Predecir Churn", variant="primary")
+            filters_automl = [brand_filter_automl, sentiment_filter_automl]
+            outputs_automl = [intel_automl_plot, amd_automl_plot, emotion_automl_plot, comments_automl]
+            demo.load(lambda b, s: update_dashboard(df_automl_predictions, b, s), inputs=filters_automl, outputs=outputs_automl)
+            for f in filters_automl: f.change(lambda b, s: update_dashboard(df_automl_predictions, b, s), inputs=filters_automl, outputs=outputs_automl)
+            
+            gr.Markdown("<h3>Detalles del Modelo AutoML</h3>")
+            gr.HTML(value=automl_model_info_str)
 
-        # --- Columna Derecha: Salidas (Resultado y SHAP) ---
-        with gr.Column(scale=2):
-            gr.Markdown("<h3>Resultado y Explicación del Modelo</h3>")
-            output_label = gr.HTML(label="Predicción")
-            output_score = gr.HTML(label="Detalle")
-            shap_output = gr.HTML(label="Factores Clave (SHAP)")
-
-    # Conectar el botón con la función y las I/O
-    predict_btn.click(
-        fn=predict,
-        inputs=[gender, age, tenure, usage_frequency, support_calls, payment_delay,
-                subscription_type, contract_length, total_spend, last_interaction],
-        outputs=[output_label, output_score, shap_output]
-    )
-    
-    # Ejemplos para probar la app
-    gr.Examples(
-        examples=[
-            ["Male", 30, 12, 15, 1, 0, "Basic", "Monthly", 250.0, 7],
-            ["Female", 45, 36, 20, 3, 5, "Premium", "Annual", 1500.0, 15],
-            ["Male", 55, 6, 5, 5, 20, "Standard", "Monthly", 100.0, 25]
-        ],
-        inputs=[gender, age, tenure, usage_frequency, support_calls, payment_delay,
-                subscription_type, contract_length, total_spend, last_interaction],
-    )
+        # --- Pestaña 2: Resultados con Modelo Experto (RoBERTa) ---
+        with gr.TabItem("Resultados con Modelo Experto (RoBERTa)"):
+            gr.Markdown("<p>Análisis de alta precisión utilizando un modelo Transformer pre-entrenado (State-of-the-Art).</p>")
+            with gr.Row():
+                brand_filter_roberta = gr.Dropdown(choices=["Ambas", "Intel", "AMD"], value="Ambas", label="Filtrar por Marca")
+                sentiment_filter_roberta = gr.Dropdown(choices=["Todos"] + (df_roberta['sentiment'].unique().tolist() if not df_roberta.empty else []), value="Todos", label="Filtrar por Sentimiento")
+            with gr.Row():
+                intel_sentiment_plot = gr.Plot()
+                amd_sentiment_plot = gr.Plot()
+            with gr.Row():
+                emotion_plot_roberta = gr.Plot()
+            gr.Markdown("<h3>Vista Previa de Comentarios</h3>")
+            comments_roberta = gr.DataFrame(headers=["Marca", "Comentario", "Sentimiento (RoBERTa)", "Emoción"], wrap=True)
+            
+            filters_roberta = [brand_filter_roberta, sentiment_filter_roberta]
+            outputs_roberta = [intel_sentiment_plot, amd_sentiment_plot, emotion_plot_roberta, comments_roberta]
+            demo.load(lambda b, s: update_dashboard(df_roberta, b, s), inputs=filters_roberta, outputs=outputs_roberta)
+            for f in filters_roberta: f.change(lambda b, s: update_dashboard(df_roberta, b, s), inputs=filters_roberta, outputs=outputs_roberta)
 
 demo.launch()
