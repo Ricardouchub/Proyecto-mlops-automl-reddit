@@ -18,7 +18,7 @@ jobs:
         with:
           python-version: '3.11'
 
-      # --- ¡NUEVO PASO DE OPTIMIZACIÓN! ---
+      # Optimización: Cache de dependencias de pip para acelerar futuras ejecuciones
       - name: Cache de dependencias de Pip
         uses: actions/cache@v4
         with:
