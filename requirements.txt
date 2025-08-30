@@ -1,6 +1,14 @@
 pandas
-pycaret
-mlflow==2.10.0
-fastapi
-uvicorn
+praw
+python-dotenv
+# --- Librerías de NLP ---
+transformers
+torch
+sentencepiece
+# Para Modelado de Tópicos
+gensim
+nltk
+# --- Librerías de Visualización ---
 gradio
+plotly
+wordcloud
