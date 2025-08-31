@@ -28,24 +28,24 @@ Este proyecto es un **sistema vivo y autónomo**. La magia reside en la orquesta
 
 * **Activación:** Se ejecuta automáticamente todos los días a las 05:00 UTC.
 * **Misión:**
-    1.  `▶️` Ejecuta el script `extract_reddit_data.py`.
-    2.  `📡` Se conecta a la API de Reddit y busca nuevos comentarios sobre Intel y AMD.
-    3.  `💾` Actualiza el archivo `data/reddit_comments.csv`.
-    4.  `⬆️` Hace `commit` y `push` del archivo actualizado al repositorio, **activando el siguiente bot**.
+    1.  Ejecuta el script `extract_reddit_data.py`.
+    2.  Se conecta a la API de Reddit y busca nuevos comentarios sobre Intel y AMD.
+    3.  Actualiza el archivo `data/reddit_comments.csv`.
+    4.  Hace `commit` y `push` del archivo actualizado al repositorio, **activando el siguiente bot**.
 
-#### **🤖 Bot 2: El Procesador y Entrenador (Reactivo)**
+#### ** Bot 2: El Procesador y Entrenador (Reactivo)**
 
 * **Activación:** Se dispara inmediatamente después de que el Bot 1 sube los nuevos datos.
 * **Arquitectura:** Para solucionar el problema de `No space left on device` en los runners de GitHub, este pipeline se divide en **dos trabajos secuenciales y especializados**:
     1.  **Job `process-data`:**
-        * `🧠` Instala **solo** las librerías de NLP y ejecuta `nlp_processor.py` para enriquecer los datos.
-        * `📦` Guarda los datos procesados como un "artefacto" temporal.
+        *  Instala **solo** las librerías de NLP y ejecuta `nlp_processor.py` para enriquecer los datos.
+        *  Guarda los datos procesados como un "artefacto" temporal.
     2.  **Job `train-model`:**
-        * `📥` Descarga el artefacto del job anterior.
-        * `🏋️‍♂️` Instala **solo** las librerías de AutoML y ejecuta `python_train.py` para entrenar el modelo.
-        * `📦` Guarda el modelo (`.pkl`) y el gráfico de importancia como artefactos finales.
+        * Descarga el artefacto del job anterior.
+        *  Instala **solo** las librerías de AutoML y ejecuta `python_train.py` para entrenar el modelo.
+        *  Guarda el modelo (`.pkl`) y el gráfico de importancia como artefactos finales.
 
-## 💡 La Historia: AutoML vs. Modelo Experto
+##  La Historia: AutoML vs. Modelo Experto
 
 Uno de los hallazgos clave de este proyecto es la comparación directa entre un modelo entrenado por nosotros y un modelo pre-entrenado de última generación.
 
