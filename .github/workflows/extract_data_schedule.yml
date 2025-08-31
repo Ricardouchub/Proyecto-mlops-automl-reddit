@@ -9,11 +9,6 @@ jobs:
   extract-and-commit:
     runs-on: ubuntu-latest
 
-    # --- ¡AQUÍ ESTÁ LA SOLUCIÓN! ---
-    # Se añade este bloque para dar permisos de escritura al bot
-    permissions:
-      contents: write
-
     steps:
       - name: Checkout del repositorio
         uses: actions/checkout@v4
@@ -33,10 +28,18 @@ jobs:
           REDDIT_USER_AGENT: ${{ secrets.REDDIT_USER_AGENT }}
         run: python extract_reddit_data.py
 
-      - name: Hacer commit y push de los nuevos datos
+      - name: Hacer commit y push de los nuevos datos usando el PAT
         run: |
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
           git add data/reddit_comments.csv
-          git diff --staged --quiet || git commit -m "📊 Datos crudos de Reddit actualizados"
-          git push
+          
+          # Si no hay cambios, salimos del script
+          if git diff --staged --quiet; then
+            echo "No hay nuevos datos para hacer commit."
+            exit 0
+          fi
+          
+          git commit -m "Datos crudos de Reddit actualizados"
+          # Usamos el PAT para autenticar el push
+          git push https://x-access-token:${{ secrets.ACTIONS_PAT }}@github.com/${{ github.repository }}.git HEAD:main
