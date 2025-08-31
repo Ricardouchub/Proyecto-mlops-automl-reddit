@@ -1,12 +1,13 @@
-name: Procesar Datos y Entrenar Modelo AutoML
+name: Pipeline de Procesamiento y Entrenamiento
 
 on:
   push:
     branches: [ main ]
-  workflow_dispatch: # Permite ejecución manual
+  workflow_dispatch:
 
 jobs:
-  build-and-train:
+  # --- JOB 1: PROCESAR LOS DATOS ---
+  process-data:
     runs-on: ubuntu-latest
 
     steps:
@@ -18,40 +19,57 @@ jobs:
         with:
           python-version: '3.11'
 
-      # Optimización: Cache de dependencias de pip para acelerar futuras ejecuciones
-      - name: Cache de dependencias de Pip
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip # La carpeta donde pip guarda los paquetes descargados
-          # Crea una "llave" única para el cache. Si requirements.txt cambia, la llave cambia y el cache se invalida.
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-
-      - name: Instalar dependencias
+      # Instala solo las dependencias de NLP
+      - name: Instalar dependencias de NLP
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install pandas transformers torch sentencepiece gensim nltk python-dotenv
 
-      # --- ETAPA DE PROCESAMIENTO ---
-      - name: 1. Ejecutar el procesador de NLP
+      - name: Ejecutar el procesador de NLP
         run: python nlp_processor.py
 
-      # --- ETAPA DE ENTRENAMIENTO ---
-      - name: 2. Ejecutar el entrenador de AutoML
+      # Guarda los archivos procesados como un artefacto
+      - name: Guardar artefactos de datos
+        uses: actions/upload-artifact@v4
+        with:
+          name: processed-data
+          path: |
+            data/processed_reddit_data.csv
+            data/topic_keywords.csv
+
+  # --- JOB 2: ENTRENAR EL MODELO (depende del Job 1) ---
+  train-model:
+    # Este job solo empieza cuando 'process-data' termina con éxito
+    needs: process-data
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout del repositorio
+        uses: actions/checkout@v4
+      
+      # Descarga los artefactos del job anterior
+      - name: Descargar artefactos de datos
+        uses: actions/download-artifact@v4
+        with:
+          name: processed-data
+          path: data
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # Instala solo las dependencias de AutoML
+      - name: Instalar dependencias de AutoML
+        run: pip install pycaret pandas
+
+      - name: Ejecutar el entrenador de AutoML
         run: python python_train.py
 
-      # --- ETAPA DE GUARDADO DE ARTEFACTOS ---
-      - name: 3. Hacer commit y push del modelo y artefactos
-        run: |
-          git config --global user.name 'github-actions[bot]'
-          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-          
-          git add data/processed_reddit_data.csv
-          git add data/topic_keywords.csv
-          git add models/sentiment_model_v2.pkl
-          git add "Feature Importance.png"
-          
-          # Solo hacer commit si se detectan cambios en los archivos
-          git diff --staged --quiet || git commit -m "🤖 AutoML: Modelo y artefactos actualizados"
-          git push
+      # Guarda el modelo y el gráfico como artefactos
+      - name: Guardar artefactos de modelo
+        uses: actions/upload-artifact@v4
+        with:
+          name: model-artifacts
+          path: |
+            models/sentiment_model_v2.pkl
+            "Feature Importance.png"
