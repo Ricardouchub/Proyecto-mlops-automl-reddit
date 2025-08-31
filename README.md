@@ -24,7 +24,7 @@ Este proyecto demuestra la construcción de un **pipeline de MLOps de extremo a 
 
 Este proyecto es un **sistema vivo y autónomo**. La magia reside en la orquestación de workflows de GitHub Actions que trabajan en conjunto:
 
-#### ** Bot 1: El Extractor de Datos (Diario)**
+#### Bot 1: El Extractor de Datos (Diario)
 
 * **Activación:** Se ejecuta automáticamente todos los días a las 05:00 UTC.
 * **Misión:**
@@ -33,7 +33,7 @@ Este proyecto es un **sistema vivo y autónomo**. La magia reside en la orquesta
     3.  Actualiza el archivo `data/reddit_comments.csv`.
     4.  Hace `commit` y `push` del archivo actualizado al repositorio, **activando el siguiente bot**.
 
-#### ** Bot 2: El Procesador y Entrenador (Reactivo)**
+#### Bot 2: El Procesador y Entrenador (Reactivo)
 
 * **Activación:** Se dispara inmediatamente después de que el Bot 1 sube los nuevos datos.
 * **Arquitectura:** Para solucionar el problema de `No space left on device` en los runners de GitHub, este pipeline se divide en **dos trabajos secuenciales y especializados**:
