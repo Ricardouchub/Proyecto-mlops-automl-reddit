@@ -58,9 +58,9 @@ jobs:
         with:
           python-version: '3.11'
 
-      # Instala solo las dependencias de AutoML
+      # Instala las dependencias de AutoML y también torch
       - name: Instalar dependencias de AutoML
-        run: pip install pycaret pandas
+        run: pip install pycaret pandas torch 
 
       - name: Ejecutar el entrenador de AutoML
         run: python python_train.py
