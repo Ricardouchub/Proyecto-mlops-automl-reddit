@@ -9,25 +9,15 @@ jobs:
   # --- JOB 1: PROCESAR LOS DATOS ---
   process-data:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout del repositorio
-        uses: actions/checkout@v4
-
-      - name: Configurar Python
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-
-      # Instala solo las dependencias de NLP
       - name: Instalar dependencias de NLP
-        run: |
-          pip install pandas transformers torch sentencepiece gensim nltk python-dotenv
-
+        run: pip install pandas transformers torch sentencepiece gensim nltk python-dotenv
       - name: Ejecutar el procesador de NLP
         run: python nlp_processor.py
-
-      # Guarda los archivos procesados como un artefacto
       - name: Guardar artefactos de datos
         uses: actions/upload-artifact@v4
         with:
@@ -36,40 +26,32 @@ jobs:
             data/processed_reddit_data.csv
             data/topic_keywords.csv
 
-  # --- JOB 2: ENTRENAR EL MODELO (depende del Job 1) ---
+  # --- JOB 2: ENTRENAR EL MODELO ---
   train-model:
-    # Este job solo empieza cuando 'process-data' termina con éxito
     needs: process-data
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout del repositorio
-        uses: actions/checkout@v4
-      
-      # Descarga los artefactos del job anterior
+      - uses: actions/checkout@v4
       - name: Descargar artefactos de datos
         uses: actions/download-artifact@v4
         with:
           name: processed-data
           path: data
-
-      - name: Configurar Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      # Instala las dependencias de AutoML y también torch
       - name: Instalar dependencias de AutoML
-        run: pip install pycaret pandas torch 
+        run: pip install pycaret pandas torch mlflow==2.10.0
 
       - name: Ejecutar el entrenador de AutoML
         run: python python_train.py
-
-      # Guarda el modelo y el gráfico como artefactos
+        
+      # Guarda los artefactos finales que usará la app
       - name: Guardar artefactos de modelo
         uses: actions/upload-artifact@v4
         with:
-          name: model-artifacts
+          name: final-artifacts
           path: |
             models/sentiment_model_v2.pkl
             "Feature Importance.png"
