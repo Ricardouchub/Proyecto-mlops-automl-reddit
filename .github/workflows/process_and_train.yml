@@ -1,15 +1,10 @@
 name: Pipeline de Procesamiento y Entrenamiento
 
 on:
-  # Se activa cuando el workflow 'Extracción Diaria de Datos de Reddit' termina con éxito
   workflow_run:
     workflows: ["Extracción Diaria de Datos de Reddit"]
-    types:
-      - completed
-    branches:
-      - main
-  
-  # Permite ejecución manual
+    types: [completed]
+    branches: [main]
   workflow_dispatch:
 
 jobs:
@@ -19,22 +14,17 @@ jobs:
     if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
 
     steps:
-      - name: Checkout del repositorio
-        uses: actions/checkout@v4
-
-      - name: Configurar Python
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      # Instala solo las dependencias de NLP
       - name: Instalar dependencias de NLP
-        run: pip install pandas transformers torch==2.1.0 sentencepiece gensim nltk python-dotenv
+        run: pip install pandas transformers torch sentencepiece gensim nltk python-dotenv
 
       - name: Ejecutar el procesador de NLP
         run: python nlp_processor.py
 
-      # Guarda los archivos procesados como un artefacto para el siguiente job
       - name: Guardar artefactos de datos
         uses: actions/upload-artifact@v4
         with:
@@ -43,49 +33,39 @@ jobs:
             data/processed_reddit_data.csv
             data/topic_keywords.csv
 
-  # --- JOB 2: ENTRENAR EL MODELO (depende del Job 1) ---
+  # --- JOB 2: ENTRENAR EL MODELO ---
   train-model:
     needs: process-data
     runs-on: ubuntu-latest
-    # Le damos permisos de escritura para que pueda hacer push
     permissions:
       contents: write
 
     steps:
-      - name: Checkout del repositorio
-        uses: actions/checkout@v4
-      
-      # Descarga los datos procesados del job anterior
+      - uses: actions/checkout@v4
       - name: Descargar artefactos de datos
         uses: actions/download-artifact@v4
         with:
           name: processed-data
           path: data
-
-      - name: Configurar Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-
-      # Instala solo las dependencias de AutoML
+          
       - name: Instalar dependencias de AutoML
-        run: pip install pycaret pandas torch==2.1.0 mlflow==2.10.0
+        run: pip install pycaret pandas torch mlflow
 
       - name: Ejecutar el entrenador de AutoML
         run: python python_train.py
 
-      # Hace commit y push de los artefactos finales al repositorio
       - name: Hacer commit y push del modelo y artefactos
         run: |
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
           
-          # Añadir todos los archivos nuevos o modificados
           git add data/processed_reddit_data.csv
           git add data/topic_keywords.csv
           git add models/sentiment_model_v2.pkl
           git add "Feature Importance.png"
           
-          # Solo hacer commit si se detectan cambios
           git diff --staged --quiet || git commit -m "AutoML: Modelo y artefactos actualizados por pipeline"
           git push
