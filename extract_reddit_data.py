@@ -18,7 +18,7 @@ SEARCH_TERMS = {
 }
 
 SUBREDDITS = ['hardware', 'buildapc', 'pcmasterrace', 'AMD', 'Intel']
-POST_LIMIT = 50
+POST_LIMIT = 15
 
 # --- ¡CAMBIO! Se define la nueva ruta de guardado ---
 OUTPUT_FOLDER = "data"
