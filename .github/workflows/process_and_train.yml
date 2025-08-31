@@ -1,57 +1,65 @@
 name: Pipeline de Procesamiento y Entrenamiento
 
 on:
-  push:
-    branches: [ main ]
+  # Se activa cuando el workflow 'Extracción Diaria de Datos de Reddit' termina con éxito
+  workflow_run:
+    workflows: ["Extracción Diaria de Datos de Reddit"]
+    types:
+      - completed
+    branches:
+      - main
+  
+  # Mantenemos workflow_dispatch para poder ejecutarlo manualmente si es necesario
   workflow_dispatch:
 
 jobs:
-  # --- JOB 1: PROCESAR LOS DATOS ---
-  process-data:
+  # Este job solo se ejecutará si el workflow anterior tuvo éxito
+  build-and-train:
     runs-on: ubuntu-latest
+    # Añadimos una condición para asegurarnos de que solo se ejecute tras un éxito
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      # 1. Clona el repositorio. Importante: debe usar el commit que disparó este evento.
+      - name: Checkout del repositorio
+        uses: actions/checkout@v4
+
+      # 2. Configura Python
+      - name: Configurar Python
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Instalar dependencias de NLP
-        run: pip install pandas transformers torch sentencepiece gensim nltk python-dotenv
-      - name: Ejecutar el procesador de NLP
+          
+      # 3. Cache de dependencias
+      - name: Cache de dependencias de Pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+
+      # 4. Instala todas las dependencias del proyecto
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt
+
+      # --- ETAPA DE PROCESAMIENTO ---
+      - name: 1. Ejecutar el procesador de NLP
         run: python nlp_processor.py
-      - name: Guardar artefactos de datos
-        uses: actions/upload-artifact@v4
-        with:
-          name: processed-data
-          path: |
-            data/processed_reddit_data.csv
-            data/topic_keywords.csv
 
-  # --- JOB 2: ENTRENAR EL MODELO ---
-  train-model:
-    needs: process-data
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Descargar artefactos de datos
-        uses: actions/download-artifact@v4
-        with:
-          name: processed-data
-          path: data
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Instalar dependencias de AutoML
-        run: pip install pycaret pandas torch mlflow==2.10.0
-
-      - name: Ejecutar el entrenador de AutoML
+      # --- ETAPA DE ENTRENAMIENTO ---
+      - name: 2. Ejecutar el entrenador de AutoML
         run: python python_train.py
-        
-      # Guarda los artefactos finales que usará la app
-      - name: Guardar artefactos de modelo
-        uses: actions/upload-artifact@v4
-        with:
-          name: final-artifacts
-          path: |
-            models/sentiment_model_v2.pkl
-            "Feature Importance.png"
+
+      # --- ETAPA DE GUARDADO DE ARTEFACTOS ---
+      - name: 3. Hacer commit y push del modelo y artefactos
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          
+          git add data/processed_reddit_data.csv
+          git add data/topic_keywords.csv
+          git add models/sentiment_model_v2.pkl
+          git add "Feature Importance.png"
+          
+          # Solo hacer commit si se detectan cambios en los archivos
+          git diff --staged --quiet || git commit -m "🤖 AutoML: Modelo y artefactos actualizados"
+          git push
