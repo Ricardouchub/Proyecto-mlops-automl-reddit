@@ -129,4 +129,4 @@ with gr.Blocks(theme=custom_theme, css=custom_css, title="Dashboard Comparativo:
             demo.load(lambda b, s: update_dashboard(df_roberta, b, s), inputs=filters_roberta, outputs=outputs_roberta)
             for f in filters_roberta: f.change(lambda b, s: update_dashboard(df_roberta, b, s), inputs=filters_roberta, outputs=outputs_roberta)
 
-demo.launch()
+demo.launch(server_name="0.0.0.0", server_port=7860)
