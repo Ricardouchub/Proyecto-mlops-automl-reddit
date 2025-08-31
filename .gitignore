@@ -8,8 +8,5 @@ __pycache__/
 # Logs y artefactos de MLflow
 mlruns/
 
-# Modelos guardados localmente
-*.pkl
-
 # 
 .env
