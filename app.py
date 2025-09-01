@@ -15,19 +15,28 @@ df_automl_predictions = pd.DataFrame()
 automl_model_info_str = "El modelo de AutoML no se pudo cargar. Asegúrate de que el pipeline de entrenamiento se haya ejecutado con éxito."
 
 try:
-    # Cargar el modelo AutoML
     automl_model_pipeline = load_model(AUTOML_MODEL_PATH)
     automl_model_info_str = f"Mejor modelo encontrado por AutoML: <pre>{str(automl_model_pipeline.steps[-1][1])}</pre>"
     
-    # Cargar los datos procesados para hacer predicciones
     df_processed = pd.read_csv(PROCESSED_DATA_PATH)
     
     if not df_processed.empty:
         print("Generando predicciones con el modelo AutoML...")
-        # El modelo fue entrenado con 'text' y 'brand', así que le pasamos esas columnas
-        predictions = predict_model(automl_model_pipeline, data=df_processed[['text', 'brand']])
-        df_automl_predictions = predictions.rename(columns={'prediction_label': 'sentiment'})
-        print("Predicciones de AutoML generadas.")
+        
+        # --- ¡CORRECCIÓN CLAVE! ---
+        # Creamos un DataFrame limpio solo con las columnas que el modelo fue entrenado.
+        data_for_prediction = df_processed[['text', 'brand']]
+        
+        # Le pasamos solo esos datos a la función de predicción.
+        predictions = predict_model(automl_model_pipeline, data=data_for_prediction)
+        
+        # Unimos las predicciones con la marca para poder filtrar en el dashboard.
+        df_automl_predictions = pd.concat([
+            df_processed['brand'].reset_index(drop=True),
+            predictions[['prediction_label', 'prediction_score', 'text']].reset_index(drop=True)
+        ], axis=1)
+        df_automl_predictions = df_automl_predictions.rename(columns={'prediction_label': 'sentiment'})
+        print("Predicciones de AutoML generadas correctamente.")
 
 except Exception as e:
     print(f"Advertencia: Ocurrió un error al cargar o usar el modelo AutoML. {e}")
@@ -69,7 +78,7 @@ custom_theme = gr.themes.Base(font=[gr.themes.GoogleFont("Inter"), "Arial", "san
 custom_css = "h1 { color: #2c3e50; text-align: center; font-weight: 700; } h3 { color: #333d4d; font-weight: 600; } p { color: #5d6776; text-align: center; }"
 
 with gr.Blocks(theme=custom_theme, css=custom_css, title="Dashboard de AutoML: Intel vs AMD") as demo:
-    gr.Markdown("<h1>Resultados del Pipeline de AutoML</h1>")
+    gr.Markdown("<h1>📊 Dashboard de Resultados del Pipeline de AutoML</h1>")
     gr.Markdown("<p>Análisis de sentimiento utilizando nuestro modelo propio, entrenado y desplegado automáticamente con un pipeline de MLOps.</p>")
     
     with gr.Row():
