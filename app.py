@@ -1,4 +1,5 @@
 import os
+import re
 import pandas as pd
 import plotly.express as px
 import gradio as gr
@@ -15,21 +16,14 @@ SENTIMENT_ORDER = ["Positive", "Neutral", "Negative"]
 BRAND_ORDER = ["Intel", "AMD"]
 
 def _normalize_input_path(p: str) -> str:
-    """
-    Recibe una ruta que podría venir con prefijo 'proyecto-mlops-reddit/' y lo elimina.
-    También limpia caracteres de salto de línea o retorno de carro (\r, \n).
-    """
     if not p:
         return DEFAULT_RESULTS_PATH
     p = p.replace("\r", "").replace("\n", "")
-    # Quita prefijo del repo si viene incluido
     if p.startswith(REPO_FOLDER_NAME + os.sep):
         p = p[len(REPO_FOLDER_NAME + os.sep):]
-    # Normaliza separadores
     return os.path.normpath(p)
 
 def _read_csv_safe(path: str) -> pd.DataFrame:
-    """Lee un CSV intentando con distintas codificaciones."""
     for enc in ("utf-8", "utf-8-sig", "latin-1"):
         try:
             return pd.read_csv(path, encoding=enc)
@@ -37,19 +31,38 @@ def _read_csv_safe(path: str) -> pd.DataFrame:
             continue
     return pd.read_csv(path, encoding="utf-8")
 
+# --- Mapeo agresivo de marcas ---
+INTEL_PAT = re.compile(r"\bintel\b", flags=re.IGNORECASE)
+AMD_PAT   = re.compile(r"\bamd\b",   flags=re.IGNORECASE)
+
+def _map_brand_any(value: str) -> str:
+    """
+    Mapea cualquier variante de brand a 'Intel' o 'AMD' si contiene esas cadenas.
+    Si no coincide, devuelve la versión limpia (title-case) para diagnóstico.
+    """
+    s = str(value).strip()
+    if INTEL_PAT.search(s):
+        return "Intel"
+    if AMD_PAT.search(s):
+        return "AMD"
+    return s.strip().title()
+
 def _normalize_df(df: pd.DataFrame) -> pd.DataFrame:
-    """Normaliza columnas clave para evitar variaciones de etiqueta."""
     if df.empty:
         return df
     df = df.copy()
 
+    # --- brand ---
     if "brand" in df.columns:
-        df["brand"] = (
-            df["brand"].astype(str).str.strip().str.title().replace({"Amd": "AMD"})
-        )
+        df["brand_original"] = df["brand"].astype(str)  # para diagnóstico
+        df["brand"] = df["brand"].apply(_map_brand_any)
+
+    # --- sentiment ---
     if "sentiment" in df.columns:
         df["sentiment"] = (
-            df["sentiment"].astype(str).str.strip().str.title().replace({
+            df["sentiment"]
+            .astype(str).str.strip().str.title()
+            .replace({
                 "Positivo": "Positive",
                 "Negativo": "Negative",
                 "Neutralidad": "Neutral",
@@ -57,24 +70,35 @@ def _normalize_df(df: pd.DataFrame) -> pd.DataFrame:
             })
         )
         df = df[df["sentiment"].isin(SENTIMENT_ORDER)]
+
     return df
 
 def _prep_counts(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Devuelve DataFrame con ['sentiment','count'] para alimentar el pie.
+    Fuerza 'count' a numérico para evitar reparto 33.3% por tipos string.
+    """
     if df.empty or "sentiment" not in df.columns:
         return pd.DataFrame(columns=["sentiment", "count"])
     counts = (df["sentiment"].value_counts()
               .rename_axis("sentiment").reset_index(name="count"))
     counts = counts[counts["sentiment"].isin(SENTIMENT_ORDER)]
     counts["sentiment"] = pd.Categorical(counts["sentiment"], SENTIMENT_ORDER, True)
+    # Asegurar tipo numérico
+    counts["count"] = pd.to_numeric(counts["count"], errors="coerce").fillna(0).astype(int)
     return counts.sort_values("sentiment")
 
 def _prep_brand_sentiment_counts(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Conteos por (brand, sentiment) para comparación y diagnósticos.
+    """
     if df.empty or not {"brand", "sentiment"}.issubset(df.columns):
         return pd.DataFrame(columns=["brand", "sentiment", "count"])
     g = (df.groupby(["brand", "sentiment"]).size().reset_index(name="count"))
     g = g[g["sentiment"].isin(SENTIMENT_ORDER)]
     g["sentiment"] = pd.Categorical(g["sentiment"], SENTIMENT_ORDER, True)
     g["brand"] = pd.Categorical(g["brand"], BRAND_ORDER, True)
+    g["count"] = pd.to_numeric(g["count"], errors="coerce").fillna(0).astype(int)
     return g.sort_values(["sentiment", "brand"])
 
 def create_sentiment_pie(data: pd.DataFrame, brand_name: str):
@@ -109,7 +133,6 @@ def create_compare_bar(data: pd.DataFrame):
 # --------------------------
 # 2) Carga inicial
 # --------------------------
-# Permite override por env var (útil en Render)
 env_path = os.environ.get("AUTOML_RESULTS_PATH", DEFAULT_RESULTS_PATH)
 AUTOML_RESULTS_PATH = _normalize_input_path(env_path)
 
@@ -121,7 +144,6 @@ automl_model_info_str = (
 def load_data():
     global df_automl_predictions
     try:
-        # DEBUG a logs
         abs_path = os.path.abspath(AUTOML_RESULTS_PATH)
         print("[DEBUG] LEYENDO CSV:", abs_path)
         print("[DEBUG] exists?:", os.path.exists(AUTOML_RESULTS_PATH))
@@ -131,11 +153,18 @@ def load_data():
             except Exception as _e:
                 print("[DEBUG] os.path.getsize error:", _e)
         df = _read_csv_safe(AUTOML_RESULTS_PATH)
+        # --- Normaliza (incluye mapeo agresivo de brand) ---
         df = _normalize_df(df)
-        print("[DEBUG] shape:", df.shape)
+
+        print("[DEBUG] shape post-normalization:", df.shape)
+        # Diagnóstico rápido a logs
         if set(["brand", "sentiment"]).issubset(df.columns):
             print("[DEBUG] brand x sentiment:\n",
                   df.groupby(["brand", "sentiment"]).size().reset_index(name="count").to_string(index=False))
+            if "brand_original" in df.columns:
+                print("[DEBUG] Top brands originales:\n",
+                      df["brand_original"].str.strip().value_counts().head(10).to_string())
+
         df_automl_predictions = df
         return True, f"OK: {abs_path}", df
     except Exception as e:
@@ -143,7 +172,6 @@ def load_data():
         df_automl_predictions = pd.DataFrame(columns=["brand", "text", "sentiment"])
         return False, str(e), df_automl_predictions
 
-# Carga inicial
 _ = load_data()
 
 try:
@@ -156,9 +184,15 @@ except Exception as e:
 # 3) Callbacks UI
 # --------------------------
 def update_dashboard(brand_filter, sentiment_filter):
+    """
+    Devuelve:
+      fig_intel, fig_amd, fig_compare, table_df,
+      intel_counts_tbl, amd_counts_tbl
+    """
     if df_automl_predictions.empty:
         empty_df = pd.DataFrame(columns=["Marca", "Comentario", "Sentimiento (AutoML)"])
-        return None, None, None, empty_df
+        empty_counts = pd.DataFrame(columns=["sentiment", "count"])
+        return None, None, None, empty_df, empty_counts, empty_counts
 
     filtered = df_automl_predictions.copy()
     if brand_filter != "Ambas":
@@ -168,36 +202,53 @@ def update_dashboard(brand_filter, sentiment_filter):
 
     if brand_filter == "Ambas":
         intel_df = filtered[filtered["brand"] == "Intel"]
-        amd_df = filtered[filtered["brand"] == "AMD"]
+        amd_df   = filtered[filtered["brand"] == "AMD"]
+
+        intel_counts = _prep_counts(intel_df)
+        amd_counts   = _prep_counts(amd_df)
+
         fig_intel = create_sentiment_pie(intel_df, "Intel")
-        fig_amd = create_sentiment_pie(amd_df, "AMD")
+        fig_amd   = create_sentiment_pie(amd_df, "AMD")
         fig_compare = create_compare_bar(filtered)
     else:
-        brand_df = filtered[filtered["brand"] == brand_filter]
-        fig_brand = create_sentiment_pie(brand_df, brand_filter)
+        brand_df     = filtered[filtered["brand"] == brand_filter]
+        brand_counts = _prep_counts(brand_df)
+        fig_brand    = create_sentiment_pie(brand_df, brand_filter)
         fig_intel, fig_amd = fig_brand, fig_brand
-        fig_compare = px.bar(title="Comparación Intel vs AMD (disponible cuando 'Ambas')")
+        fig_compare  = px.bar(title="Comparación Intel vs AMD (disponible cuando 'Ambas')")
+
+        intel_counts = brand_counts
+        amd_counts   = brand_counts
 
     table_df = (
         filtered[["brand", "text", "sentiment"]]
         .rename(columns={"brand": "Marca", "text": "Comentario", "sentiment": "Sentimiento (AutoML)"})
         .head(100)
     )
-    return fig_intel, fig_amd, fig_compare, table_df
+    return fig_intel, fig_amd, fig_compare, table_df, intel_counts, amd_counts
 
 def get_diagnostics():
-    """Devuelve info de diagnóstico visible en UI."""
     path = os.path.abspath(AUTOML_RESULTS_PATH)
     exists = os.path.exists(AUTOML_RESULTS_PATH)
     size = os.path.getsize(AUTOML_RESULTS_PATH) if exists else 0
     shape = df_automl_predictions.shape
     g = _prep_brand_sentiment_counts(df_automl_predictions)
-    return f"Ruta efectiva: {path}\nExiste: {exists}\nTamaño(bytes): {size}\nShape: {shape}", g
+    topb = pd.DataFrame()
+    if "brand_original" in df_automl_predictions.columns:
+        topb = (
+            df_automl_predictions["brand_original"]
+            .astype(str).str.strip()
+            .value_counts()
+            .head(12)
+            .reset_index()
+            .rename(columns={"index": "brand_original", "brand_original": "count"})
+        )
+    return f"Ruta efectiva: {path}", f"Existe: {exists}\nTamaño(bytes): {size}\nShape: {shape}", topb, g
 
 def reload_csv():
     ok, msg, _df = load_data()
-    diag, g = get_diagnostics()
-    return msg, diag, g
+    diag_path, diag_info, topb, g = get_diagnostics()
+    return msg, diag_path, diag_info, topb, g
 
 # --------------------------
 # 4) UI (Gradio)
@@ -231,7 +282,12 @@ with gr.Blocks(theme=custom_theme, css=custom_css, title="Resultados del Pipelin
 
     with gr.Row():
         intel_plot = gr.Plot(label="Intel")
-        amd_plot = gr.Plot(label="AMD")
+        amd_plot   = gr.Plot(label="AMD")
+
+    # NUEVO: tablas de conteos exactos que alimentan cada pie
+    with gr.Row():
+        intel_counts_tbl = gr.DataFrame(label="Conteos (Intel) usados por el gráfico")
+        amd_counts_tbl   = gr.DataFrame(label="Conteos (AMD) usados por el gráfico")
 
     with gr.Row():
         compare_plot = gr.Plot(label="Comparación Intel vs AMD")
@@ -245,12 +301,14 @@ with gr.Blocks(theme=custom_theme, css=custom_css, title="Resultados del Pipelin
 
     # --- Panel de Diagnóstico ---
     with gr.Accordion("🔎 Diagnóstico de datos (para verificar CSV en Render)", open=False):
-        diag_path = gr.Textbox(label="Estado de carga", interactive=False)
-        diag_info = gr.Textbox(label="Resumen (ruta/exists/size/shape)", lines=4, interactive=False)
-        diag_table = gr.DataFrame(label="brand × sentiment (conteos)")
+        diag_status = gr.Textbox(label="Estado de carga", interactive=False)
+        diag_path = gr.Textbox(label="Ruta", interactive=False)
+        diag_info = gr.Textbox(label="Resumen (exists/size/shape)", lines=3, interactive=False)
+        diag_topbrands = gr.DataFrame(label="Top marcas originales (sin mapear) - Para verificar")
+        diag_counts = gr.DataFrame(label="brand × sentiment (conteos)")
 
         reload_btn = gr.Button("Reload CSV")
-        reload_btn.click(fn=reload_csv, inputs=None, outputs=[diag_path, diag_info, diag_table])
+        reload_btn.click(fn=reload_csv, inputs=None, outputs=[diag_status, diag_path, diag_info, diag_topbrands, diag_counts])
 
     gr.Markdown("<h3>Detalles del Modelo AutoML</h3>")
     try:
@@ -262,18 +320,16 @@ with gr.Blocks(theme=custom_theme, css=custom_css, title="Resultados del Pipelin
 
     # Conectar
     inputs = [brand_filter, sentiment_filter]
-    outputs = [intel_plot, amd_plot, compare_plot, comments_table]
+    outputs = [intel_plot, amd_plot, compare_plot, comments_table, intel_counts_tbl, amd_counts_tbl]
     demo.load(fn=update_dashboard, inputs=inputs, outputs=outputs)
+    for w in inputs:
+        w.change(fn=update_dashboard, inputs=inputs, outputs=outputs)
 
     # Cargar diagnóstico al inicio
     def _init_diag():
         ok, msg, _df = load_data()
-        diag, g = get_diagnostics()
-        return msg, diag, g
-    demo.load(fn=_init_diag, inputs=None, outputs=[diag_path, diag_info, diag_table])
-
-    for w in inputs:
-        w.change(fn=update_dashboard, inputs=inputs, outputs=outputs)
+        return (msg, ) + get_diagnostics()
+    demo.load(fn=_init_diag, inputs=None, outputs=[diag_status, diag_path, diag_info, diag_topbrands, diag_counts])
 
 # --------------------------
 # 5) Launch
