@@ -60,7 +60,6 @@ jobs:
           # Añadimos el nuevo archivo a la lista de empaque
           git add data/automl_results.csv
           git add models/sentiment_model_v2.pkl
-          git add "Feature Importance.png"
           
           # Ya no necesitamos subir los archivos intermedios, solo los resultados finales
           # git add data/processed_reddit_data.csv
