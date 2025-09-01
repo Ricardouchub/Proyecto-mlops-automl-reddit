@@ -7,7 +7,7 @@ __pycache__/
 
 # Logs y artefactos de MLflow
 mlruns/
-logs.log
+.log
 
 # 
 .env
