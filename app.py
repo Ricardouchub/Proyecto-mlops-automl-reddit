@@ -145,18 +145,44 @@ def create_sentiment_pie(data: pd.DataFrame, brand_name: str):
 # ------------------------------------------------------------
 
 def create_compare_bar(data: pd.DataFrame):
-    g = _prep_brand_sentiment_counts(data)
+    """
+    Barra *agrupada* Intel vs AMD por sentimiento, usando graph_objects
+    para asegurar que se usen los conteos reales (no el conteo de filas).
+    """
+    g = _prep_brand_sentiment_counts(data)  # cols: brand, sentiment, count (int)
     if g.empty:
-        return px.bar(title="Comparación Intel vs AMD (sin datos)")
-    fig = px.bar(
-        g,
-        x="sentiment",
-        y="count",
-        color="brand",
+        fig = go.Figure()
+        fig.update_layout(title="Comparación Intel vs AMD (sin datos)")
+        return fig
+
+    # Pivot a matriz [sentiment x brand] y orden fijo
+    mat = (
+        g.pivot(index="sentiment", columns="brand", values="count")
+         .reindex(index=SENTIMENT_ORDER, columns=BRAND_ORDER, fill_value=0)
+    )
+
+    x = mat.index.tolist()
+    traces = []
+    for brand in mat.columns:
+        y = pd.to_numeric(mat[brand], errors="coerce").fillna(0).astype(float).tolist()
+        traces.append(
+            go.Bar(
+                name=brand,
+                x=x,
+                y=y,
+                hovertemplate=f"{brand} – %{x}: %{y:,}<extra></extra>",
+            )
+        )
+
+    fig = go.Figure(data=traces)
+    fig.update_layout(
         barmode="group",
         title="Comparación Intel vs AMD por Sentimiento",
+        xaxis_title="Sentimiento",
+        yaxis_title="Conteo",
+        legend_title_text="brand",
     )
-    fig.update_layout(xaxis_title="Sentimiento", yaxis_title="Conteo")
+    fig.update_yaxes(tickformat=",d")  # ejes con separador de miles
     return fig
 
 # --------------------------
