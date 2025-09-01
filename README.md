@@ -20,30 +20,30 @@ Este proyecto demuestra la construcción de un **pipeline de MLOps de extremo a 
 * **Orquestación con GitHub Actions:** Múltiples pipelines de CI/CD que automatizan todo el flujo, desde la extracción de datos hasta el re-entrenamiento del modelo.
 * **Despliegue Continuo (CI/CD) en Render:** La aplicación está conectada al repositorio de GitHub, desplegándose automáticamente con cada nueva actualización del modelo.
 
-## ⚙️ El Pipeline de MLOps en Acción
+## El Pipeline de MLOps en Acción
 
 Este proyecto es un **sistema vivo y autónomo**. La magia reside en la orquestación de workflows de GitHub Actions que trabajan en conjunto:
 
-#### ** Bot 1: El Extractor de Datos (Diario)**
+#### **Bot 1: El Extractor de Datos (Diario)**
 
 * **Activación:** Se ejecuta automáticamente todos los días a las 05:00 UTC.
 * **Misión:**
-    1.  `▶️` Ejecuta el script `extract_reddit_data.py`.
-    2.  `📡` Se conecta a la API de Reddit y busca nuevos comentarios sobre Intel y AMD.
-    3.  `💾` Actualiza el archivo `data/reddit_comments.csv`.
-    4.  `⬆️` Hace `commit` y `push` del archivo actualizado al repositorio, **activando el siguiente bot**.
+    1.  Ejecuta el script `extract_reddit_data.py`.
+    2.  Se conecta a la API de Reddit y busca nuevos comentarios sobre Intel y AMD.
+    3.  Actualiza el archivo `data/reddit_comments.csv`.
+    4.  Hace `commit` y `push` del archivo actualizado al repositorio, **activando el siguiente bot**.
 
-#### **🤖 Bot 2: El Procesador y Entrenador (Reactivo)**
+#### **Bot 2: El Procesador y Entrenador (Reactivo)**
 
 * **Activación:** Se dispara automáticamente cuando el Bot 1 termina con éxito.
 * **Arquitectura:** Para solucionar el problema de `No space left on device` en los runners de GitHub, este pipeline se divide en **dos trabajos secuenciales y especializados**:
     1.  **Job `process-data`:**
-        * `🧠` Instala **solo** las librerías de NLP y ejecuta `nlp_processor.py` para enriquecer los datos.
-        * `📦` Guarda los datos procesados como un "artefacto" temporal.
+        * Instala **solo** las librerías de NLP y ejecuta `nlp_processor.py` para enriquecer los datos.
+        * Guarda los datos procesados como un "artefacto" temporal.
     2.  **Job `train-model`:**
-        * `📥` Descarga el artefacto del job anterior.
-        * `🏋️‍♂️` Instala **solo** las librerías de AutoML y ejecuta `python_train.py` para entrenar el modelo.
-        * `⬆️` Hace `commit` y `push` del modelo final (`.pkl`) y el gráfico de importancia al repositorio, **activando el despliegue en Render.**
+        * Descarga el artefacto del job anterior.
+        * Instala **solo** las librerías de AutoML y ejecuta `python_train.py` para entrenar el modelo.
+        * Hace `commit` y `push` del modelo final (`.pkl`) y el gráfico de importancia al repositorio, **activando el despliegue en Render.**
 
 ## La Historia: AutoML vs. Modelo Experto
 
