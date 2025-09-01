@@ -2,7 +2,7 @@
 
 ### Análisis Competitivo Automatizado: Intel vs. AMD en Reddit
 
-**[➡️ Ver Demo en Vivo](https://TU_URL_DE_RENDER.onrender.com)** (Reemplaza esta URL con la tuya)
+**[➡️ Ver Demo en Vivo](https://analisis-intel-amd.onrender.com/)**
 
 ---
 
