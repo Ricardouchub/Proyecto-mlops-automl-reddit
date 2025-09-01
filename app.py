@@ -2,7 +2,9 @@ import os
 import re
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go  
 import gradio as gr
+
 
 # --------------------------
 # 1) Config y utilidades
@@ -13,6 +15,7 @@ MODELS_FOLDER = "models"
 MODEL_INFO_PATH = os.path.join(MODELS_FOLDER, "model_info.txt")
 
 SENTIMENT_ORDER = ["Positive", "Neutral", "Negative"]
+PALETTE = {"Positive": "#2ca02c", "Neutral": "#7f7f7f", "Negative": "#d62728"}
 BRAND_ORDER = ["Intel", "AMD"]
 
 def _normalize_input_path(p: str) -> str:
@@ -106,31 +109,37 @@ def _prep_brand_sentiment_counts(df: pd.DataFrame) -> pd.DataFrame:
 # ---------- PIE: listas explícitas (labels/values) ----------
 def create_sentiment_pie(data: pd.DataFrame, brand_name: str):
     """
-    Construye el pie pasando listas explícitas (names/values) para evitar que
-    Plotly ignore la columna 'count' en algunos entornos.
+    Pie construido con graph_objects para impedir que Gradio/Plotly
+    “recuenten” categorías y pongan 1 por sector.
+    Requiere que _prep_counts devuelva ['sentiment','count'] ya ordenadas.
     """
     counts = _prep_counts(data)
     if counts.empty:
-        return px.pie(title=f"Sin Datos de Sentimiento para {brand_name}")
+        fig = go.Figure(data=[go.Pie(labels=[], values=[])])
+        fig.update_layout(title=f"Sin Datos de Sentimiento para {brand_name}")
+        return fig
 
-    names_list = counts["sentiment"].astype(str).tolist()
-    values_list = counts["count"].astype(float).tolist()
+    labels = counts["sentiment"].astype(str).tolist()
+    values = counts["count"].astype(float).tolist()
+    colors = [PALETTE.get(lbl, "#999999") for lbl in labels]
 
-    fig = px.pie(
-        names=names_list,
-        values=values_list,
-        title=f"Sentimiento para {brand_name} (Modelo AutoML)",
-        color=names_list,  # mapea color por etiqueta
-        color_discrete_map={"Positive": "#2ca02c", "Negative": "#d62728", "Neutral": "#7f7f7f"},
-    )
-    fig.update_traces(textinfo="label+percent", hovertemplate="%{label}: %{value} (%{percent})")
+    fig = go.Figure(data=[
+        go.Pie(
+            labels=labels,
+            values=values,
+            marker=dict(colors=colors),
+            sort=False,  # no reordenar
+            textinfo="label+percent",
+            hovertemplate="%{label}: %{value} (%{percent})<extra></extra>",
+        )
+    ])
+    fig.update_layout(title=f"Sentimiento para {brand_name} (Modelo AutoML)")
 
-    # DEBUG: verificar qué recibe Plotly
+    # DEBUG: confirma qué recibe realmente el trace
     try:
-        print(f"[DEBUG] PIE {brand_name} values:", fig.data[0]["values"])
-        print(f"[DEBUG] PIE {brand_name} labels:", fig.data[0]["labels"])
-    except Exception as _e:
-        print(f"[DEBUG] No se pudo leer values/labels del pie ({brand_name}):", _e)
+        print(f"[DEBUG] PIE {brand_name} values ->", values, "| labels ->", labels)
+    except Exception:
+        pass
 
     return fig
 # ------------------------------------------------------------
