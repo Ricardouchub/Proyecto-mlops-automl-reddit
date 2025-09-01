@@ -62,7 +62,6 @@ jobs:
           git add data/automl_results.csv
           git add models/sentiment_model_v2.pkl
           git add models/model_info.txt
-          git add "Feature Importance.png"
           
           # Opcional: También subir los datos procesados si quieres que estén en el repo
           git add data/processed_reddit_data.csv
