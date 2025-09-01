@@ -47,23 +47,24 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          
-      # --- ¡CORRECCIÓN DEFINITIVA! Se fija la versión de mlflow ---
       - name: Instalar dependencias de AutoML
         run: pip install pycaret pandas torch mlflow==2.10.0
-
       - name: Ejecutar el entrenador de AutoML
         run: python python_train.py
 
-      - name: Hacer commit y push del modelo y artefactos
+      - name: Hacer commit y push de todos los artefactos
         run: |
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
           
-          git add data/processed_reddit_data.csv
-          git add data/topic_keywords.csv
+          # Añadimos el nuevo archivo a la lista de empaque
+          git add data/automl_results.csv
           git add models/sentiment_model_v2.pkl
           git add "Feature Importance.png"
           
-          git diff --staged --quiet || git commit -m "AutoML: Modelo y artefactos actualizados por pipeline"
+          # Ya no necesitamos subir los archivos intermedios, solo los resultados finales
+          # git add data/processed_reddit_data.csv
+          # git add data/topic_keywords.csv
+          
+          git diff --staged --quiet || git commit -m "AutoML: Modelo y resultados actualizados por pipeline"
           git push
