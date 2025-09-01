@@ -1,102 +1,61 @@
-import gradio as gr
 import pandas as pd
-import plotly.express as px
-from pycaret.classification import load_model
+from pycaret.classification import *
 import os
 
 # --- 1. Definición de Rutas ---
 DATA_FOLDER = "data"
 MODELS_FOLDER = "models"
-AUTOML_RESULTS_PATH = os.path.join(DATA_FOLDER, "automl_results.csv")
-AUTOML_MODEL_PATH = os.path.join(MODELS_FOLDER, "sentiment_model_v2")
+INPUT_CSV = os.path.join(DATA_FOLDER, "processed_reddit_data.csv")
+OUTPUT_CSV = os.path.join(DATA_FOLDER, "automl_results.csv") # ¡NUEVO! Archivo de resultados
+MODEL_NAME = "sentiment_model_v2"
+MODEL_PATH = os.path.join(MODELS_FOLDER, MODEL_NAME)
+PLOT_FILENAME = "Feature Importance.png"
 
-# --- 2. Carga de Datos y Metadatos del Modelo ---
-df_automl_predictions = pd.DataFrame()
-automl_model_info_str = "La información del modelo de AutoML no se pudo cargar."
+# --- 2. Función Principal ---
+def train_and_predict():
+    if not os.path.exists(MODELS_FOLDER):
+        os.makedirs(MODELS_FOLDER)
 
-try:
-    # Cargar los resultados PRE-CALCULADOS por el pipeline de entrenamiento
-    df_automl_predictions = pd.read_csv(AUTOML_RESULTS_PATH)
-    print("Archivo de resultados de AutoML cargado correctamente.")
-except Exception as e:
-    print(f"Error al cargar '{AUTOML_RESULTS_PATH}': {e}")
-    # Crear un DataFrame vacío con las columnas esperadas para que la app no falle
-    df_automl_predictions = pd.DataFrame(columns=['brand', 'text', 'sentiment'])
-
-try:
-    # Cargar el pipeline solo para mostrar su información, no para predecir
-    automl_model_pipeline = load_model(AUTOML_MODEL_PATH)
-    automl_model_info_str = f"Mejor modelo encontrado por AutoML: <pre>{str(automl_model_pipeline.steps[-1][1])}</pre>"
-except Exception as e:
-    print(f"Advertencia: No se pudo cargar la información del modelo AutoML. {e}")
-
-# --- 3. Funciones de la App ---
-def create_sentiment_plot(data, brand_name):
-    if data.empty or 'sentiment' not in data.columns:
-        return px.pie(title=f"Sin Datos de Sentimiento para {brand_name}")
-    sentiment_counts = data['sentiment'].value_counts()
-    fig = px.pie(sentiment_counts, values=sentiment_counts.values, names=sentiment_counts.index, 
-                 title=f"Sentimiento para {brand_name} (Modelo AutoML)", color=sentiment_counts.index,
-                 color_discrete_map={'Positive':'#2ca02c', 'Negative':'#d62728', 'Neutral':'#7f7f7f'})
-    return fig
-
-def update_dashboard(brand_filter, sentiment_filter):
-    """
-    Filtra el DataFrame ya cargado en memoria y actualiza los componentes de la UI.
-    """
-    if df_automl_predictions.empty: 
-        return None, None, pd.DataFrame()
+    print(f"Cargando datos desde '{INPUT_CSV}'...")
+    dataset = pd.read_csv(INPUT_CSV)
+    dataset.dropna(subset=['text', 'sentiment'], inplace=True)
     
-    filtered = df_automl_predictions.copy()
-    if brand_filter != "Ambas": 
-        filtered = filtered[filtered['brand'] == brand_filter]
-    if sentiment_filter != "Todos": 
-        filtered = filtered[filtered['sentiment'] == sentiment_filter]
-
-    if brand_filter == "Ambas":
-        intel_df = filtered[filtered['brand'] == 'Intel']
-        amd_df = filtered[filtered['brand'] == 'AMD']
-        intel_plot = create_sentiment_plot(intel_df, "Intel")
-        amd_plot = create_sentiment_plot(amd_df, "AMD")
-        return intel_plot, amd_plot, filtered[['brand', 'text', 'sentiment']].head(100)
-    else: # Si se selecciona una marca específica
-        brand_df = filtered[filtered['brand'] == brand_filter]
-        brand_plot = create_sentiment_plot(brand_df, brand_filter)
-        # Devolvemos el mismo gráfico dos veces para llenar ambos espacios de la UI
-        return brand_plot, brand_plot, brand_df[['brand', 'text', 'sentiment']].head(100)
-
-# --- 4. Interfaz de Gradio ---
-custom_theme = gr.themes.Base(font=[gr.themes.GoogleFont("Inter"), "Arial", "sans-serif"]).set(
-    body_background_fill="#f0f2f5", block_background_fill="white", block_border_width="1px",
-    block_shadow="*shadow_drop_lg", button_primary_background_fill="#00a3c0",
-    button_primary_background_fill_hover="#00839c", button_primary_text_color="white",
-)
-custom_css = "h1 { color: #2c3e50; text-align: center; font-weight: 700; } h3 { color: #333d4d; font-weight: 600; } p { color: #5d6776; text-align: center; }"
-
-with gr.Blocks(theme=custom_theme, css=custom_css, title="Dashboard de AutoML: Intel vs AMD") as demo:
-    gr.Markdown("<h1>📊 Dashboard de Resultados del Pipeline de AutoML</h1>")
-    gr.Markdown("<p>Análisis de sentimiento utilizando nuestro modelo propio, entrenado y desplegado automáticamente con un pipeline de MLOps.</p>")
+    # --- Entrenamiento con AutoML ---
+    ignore_features = ['comment_id', 'subreddit', 'created_utc', 'score', 'emotion', 'entities', 'topic']
+    s = setup(data=dataset, target='sentiment', text_features=['text'],
+              ignore_features=ignore_features, session_id=123,
+              log_experiment=True, experiment_name="reddit_sentiment_analysis_intel_amd",
+              verbose=False)
     
-    with gr.Row():
-        brand_filter = gr.Dropdown(choices=["Ambas", "Intel", "AMD"], value="Ambas", label="Filtrar por Marca")
-        sentiment_filter = gr.Dropdown(choices=["Todos"] + (df_automl_predictions['sentiment'].unique().tolist() if not df_automl_predictions.empty else []), value="Todos", label="Filtrar por Sentimiento")
+    print("Buscando el mejor modelo...")
+    best_model = compare_models(include=['lightgbm', 'rf', 'et'])
+    print("\nMejor modelo encontrado:", best_model)
     
-    with gr.Row():
-        intel_plot = gr.Plot()
-        amd_plot = gr.Plot()
-        
-    gr.Markdown("<h3>Vista Previa de Comentarios</h3>")
-    comments_table = gr.DataFrame(headers=["Marca", "Comentario", "Sentimiento (AutoML)"], wrap=True)
-    
-    gr.Markdown("<h3>Detalles del Modelo AutoML</h3>")
-    gr.HTML(value=automl_model_info_str)
-    
-    # Conectar los filtros a la función de actualización
-    filters = [brand_filter, sentiment_filter]
-    outputs = [intel_plot, amd_plot, comments_table]
-    demo.load(fn=update_dashboard, inputs=filters, outputs=outputs)
-    for f in filters: 
-        f.change(fn=update_dashboard, inputs=filters, outputs=outputs)
+    # Generar gráfico de importancia
+    try:
+        plot_model(best_model, plot='feature', save=True)
+        generated_files = [f for f in os.listdir() if f.endswith('_feature.png')]
+        if generated_files:
+            if os.path.exists(PLOT_FILENAME): os.remove(PLOT_FILENAME)
+            os.rename(generated_files[0], PLOT_FILENAME)
+            print("Gráfico de importancia guardado.")
+    except Exception as e:
+        print(f"Advertencia: No se pudo generar el gráfico de importancia: {e}")
 
-# Lanzar la aplicación para el despliegue en Render
-demo.launch(server_name="0.0.0.0", server_port=7860)
+    # Guardar el modelo final
+    final_model = finalize_model(best_model)
+    save_model(final_model, MODEL_PATH)
+    print(f"Modelo guardado en '{MODEL_PATH}.pkl'")
+    
+    # --- ¡NUEVO! Generar y guardar las predicciones ---
+    print(f"Generando predicciones y guardando en '{OUTPUT_CSV}'...")
+    # Usamos el dataset original, ya que predict_model internamente ignorará las columnas no necesarias
+    predictions = predict_model(final_model, data=dataset)
+    # Seleccionamos solo las columnas necesarias para la app
+    results_df = predictions[['brand', 'text', 'prediction_label']]
+    results_df = results_df.rename(columns={'prediction_label': 'sentiment'})
+    results_df.to_csv(OUTPUT_CSV, index=False)
+    print("Archivo de resultados de AutoML guardado.")
+
+if __name__ == "__main__":
+    train_and_predict()
