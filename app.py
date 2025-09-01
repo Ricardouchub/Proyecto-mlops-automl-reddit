@@ -1,45 +1,34 @@
 import gradio as gr
 import pandas as pd
 import plotly.express as px
-from pycaret.classification import load_model, predict_model
+from pycaret.classification import load_model
 import os
 
 # --- 1. Definición de Rutas ---
 DATA_FOLDER = "data"
 MODELS_FOLDER = "models"
-PROCESSED_DATA_PATH = os.path.join(DATA_FOLDER, "processed_reddit_data.csv")
+AUTOML_RESULTS_PATH = os.path.join(DATA_FOLDER, "automl_results.csv")
 AUTOML_MODEL_PATH = os.path.join(MODELS_FOLDER, "sentiment_model_v2")
 
-# --- 2. Carga de Datos y Modelo AutoML ---
+# --- 2. Carga de Datos y Metadatos del Modelo ---
 df_automl_predictions = pd.DataFrame()
-automl_model_info_str = "El modelo de AutoML no se pudo cargar. Asegúrate de que el pipeline de entrenamiento se haya ejecutado con éxito."
+automl_model_info_str = "La información del modelo de AutoML no se pudo cargar."
 
 try:
+    # Cargar los resultados PRE-CALCULADOS por el pipeline de entrenamiento
+    df_automl_predictions = pd.read_csv(AUTOML_RESULTS_PATH)
+    print("Archivo de resultados de AutoML cargado correctamente.")
+except Exception as e:
+    print(f"Error al cargar '{AUTOML_RESULTS_PATH}': {e}")
+    # Crear un DataFrame vacío con las columnas esperadas para que la app no falle
+    df_automl_predictions = pd.DataFrame(columns=['brand', 'text', 'sentiment'])
+
+try:
+    # Cargar el pipeline solo para mostrar su información, no para predecir
     automl_model_pipeline = load_model(AUTOML_MODEL_PATH)
     automl_model_info_str = f"Mejor modelo encontrado por AutoML: <pre>{str(automl_model_pipeline.steps[-1][1])}</pre>"
-    
-    df_processed = pd.read_csv(PROCESSED_DATA_PATH)
-    
-    if not df_processed.empty:
-        print("Generando predicciones con el modelo AutoML...")
-        
-        # --- ¡CORRECCIÓN CLAVE! ---
-        # Creamos un DataFrame limpio solo con las columnas que el modelo fue entrenado.
-        data_for_prediction = df_processed[['text', 'brand']]
-        
-        # Le pasamos solo esos datos a la función de predicción.
-        predictions = predict_model(automl_model_pipeline, data=data_for_prediction)
-        
-        # Unimos las predicciones con la marca para poder filtrar en el dashboard.
-        df_automl_predictions = pd.concat([
-            df_processed['brand'].reset_index(drop=True),
-            predictions[['prediction_label', 'prediction_score', 'text']].reset_index(drop=True)
-        ], axis=1)
-        df_automl_predictions = df_automl_predictions.rename(columns={'prediction_label': 'sentiment'})
-        print("Predicciones de AutoML generadas correctamente.")
-
 except Exception as e:
-    print(f"Advertencia: Ocurrió un error al cargar o usar el modelo AutoML. {e}")
+    print(f"Advertencia: No se pudo cargar la información del modelo AutoML. {e}")
 
 # --- 3. Funciones de la App ---
 def create_sentiment_plot(data, brand_name):
@@ -52,11 +41,17 @@ def create_sentiment_plot(data, brand_name):
     return fig
 
 def update_dashboard(brand_filter, sentiment_filter):
-    if df_automl_predictions.empty: return None, None, pd.DataFrame()
+    """
+    Filtra el DataFrame ya cargado en memoria y actualiza los componentes de la UI.
+    """
+    if df_automl_predictions.empty: 
+        return None, None, pd.DataFrame()
     
     filtered = df_automl_predictions.copy()
-    if brand_filter != "Ambas": filtered = filtered[filtered['brand'] == brand_filter]
-    if sentiment_filter != "Todos": filtered = filtered[filtered['sentiment'] == sentiment_filter]
+    if brand_filter != "Ambas": 
+        filtered = filtered[filtered['brand'] == brand_filter]
+    if sentiment_filter != "Todos": 
+        filtered = filtered[filtered['sentiment'] == sentiment_filter]
 
     if brand_filter == "Ambas":
         intel_df = filtered[filtered['brand'] == 'Intel']
@@ -64,9 +59,10 @@ def update_dashboard(brand_filter, sentiment_filter):
         intel_plot = create_sentiment_plot(intel_df, "Intel")
         amd_plot = create_sentiment_plot(amd_df, "AMD")
         return intel_plot, amd_plot, filtered[['brand', 'text', 'sentiment']].head(100)
-    else:
+    else: # Si se selecciona una marca específica
         brand_df = filtered[filtered['brand'] == brand_filter]
         brand_plot = create_sentiment_plot(brand_df, brand_filter)
+        # Devolvemos el mismo gráfico dos veces para llenar ambos espacios de la UI
         return brand_plot, brand_plot, brand_df[['brand', 'text', 'sentiment']].head(100)
 
 # --- 4. Interfaz de Gradio ---
@@ -95,10 +91,12 @@ with gr.Blocks(theme=custom_theme, css=custom_css, title="Dashboard de AutoML: I
     gr.Markdown("<h3>Detalles del Modelo AutoML</h3>")
     gr.HTML(value=automl_model_info_str)
     
+    # Conectar los filtros a la función de actualización
     filters = [brand_filter, sentiment_filter]
     outputs = [intel_plot, amd_plot, comments_table]
     demo.load(fn=update_dashboard, inputs=filters, outputs=outputs)
-    for f in filters: f.change(fn=update_dashboard, inputs=filters, outputs=outputs)
+    for f in filters: 
+        f.change(fn=update_dashboard, inputs=filters, outputs=outputs)
 
-# Ajuste para el despliegue en Render
+# Lanzar la aplicación para el despliegue en Render
 demo.launch(server_name="0.0.0.0", server_port=7860)
