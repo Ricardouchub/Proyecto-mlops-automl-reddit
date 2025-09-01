@@ -65,5 +65,5 @@ jobs:
           git add models/sentiment_model_v2.pkl
           git add "Feature Importance.png"
           
-          git diff --staged --quiet || git commit -m "🤖 AutoML: Modelo y artefactos actualizados por pipeline"
+          git diff --staged --quiet || git commit -m "AutoML: Modelo y artefactos actualizados por pipeline"
           git push
