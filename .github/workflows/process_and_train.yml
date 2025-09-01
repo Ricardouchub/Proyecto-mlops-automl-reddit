@@ -30,7 +30,7 @@ jobs:
             data/processed_reddit_data.csv
             data/topic_keywords.csv
 
-  # --- JOB 2: ENTRENAR EL MODELO ---
+  # --- JOB 2: ENTRENAR EL MODELO Y GUARDAR RESULTADOS ---
   train-model:
     needs: process-data
     runs-on: ubuntu-latest
@@ -52,18 +52,22 @@ jobs:
       - name: Ejecutar el entrenador de AutoML
         run: python python_train.py
 
+      # Se asegura de que todos los artefactos generados se suban al repositorio
       - name: Hacer commit y push de todos los artefactos
         run: |
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
           
-          # Añadimos el nuevo archivo a la lista de empaque
+          # Añadir todos los archivos necesarios para la app y para la trazabilidad
           git add data/automl_results.csv
           git add models/sentiment_model_v2.pkl
+          git add models/model_info.txt
+          git add "Feature Importance.png"
           
-          # Ya no necesitamos subir los archivos intermedios, solo los resultados finales
-          # git add data/processed_reddit_data.csv
-          # git add data/topic_keywords.csv
+          # Opcional: También subir los datos procesados si quieres que estén en el repo
+          git add data/processed_reddit_data.csv
+          git add data/topic_keywords.csv
           
+          # Solo hacer commit si se detectan cambios
           git diff --staged --quiet || git commit -m "AutoML: Modelo y resultados actualizados por pipeline"
           git push
