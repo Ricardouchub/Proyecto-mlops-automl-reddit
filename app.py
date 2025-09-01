@@ -36,10 +36,6 @@ INTEL_PAT = re.compile(r"\bintel\b", flags=re.IGNORECASE)
 AMD_PAT   = re.compile(r"\bamd\b",   flags=re.IGNORECASE)
 
 def _map_brand_any(value: str) -> str:
-    """
-    Mapea cualquier variante de brand a 'Intel' o 'AMD' si contiene esas cadenas.
-    Si no coincide, devuelve la versión limpia (title-case) para diagnóstico.
-    """
     s = str(value).strip()
     if INTEL_PAT.search(s):
         return "Intel"
@@ -52,12 +48,10 @@ def _normalize_df(df: pd.DataFrame) -> pd.DataFrame:
         return df
     df = df.copy()
 
-    # --- brand ---
     if "brand" in df.columns:
         df["brand_original"] = df["brand"].astype(str)  # para diagnóstico
         df["brand"] = df["brand"].apply(_map_brand_any)
 
-    # --- sentiment ---
     if "sentiment" in df.columns:
         df["sentiment"] = (
             df["sentiment"]
@@ -76,44 +70,64 @@ def _normalize_df(df: pd.DataFrame) -> pd.DataFrame:
 def _prep_counts(df: pd.DataFrame) -> pd.DataFrame:
     """
     Devuelve DataFrame con ['sentiment','count'] para alimentar el pie.
-    Fuerza 'count' a numérico para evitar reparto 33.3% por tipos string.
+    Fuerza 'count' a numérico (int) y ordena por SENTIMENT_ORDER.
     """
     if df.empty or "sentiment" not in df.columns:
         return pd.DataFrame(columns=["sentiment", "count"])
     counts = (df["sentiment"].value_counts()
               .rename_axis("sentiment").reset_index(name="count"))
+    # orden + tipos
     counts = counts[counts["sentiment"].isin(SENTIMENT_ORDER)]
-    counts["sentiment"] = pd.Categorical(counts["sentiment"], SENTIMENT_ORDER, True)
-    # Asegurar tipo numérico
     counts["count"] = pd.to_numeric(counts["count"], errors="coerce").fillna(0).astype(int)
-    return counts.sort_values("sentiment")
+    # reordena según SENTIMENT_ORDER
+    order_index = {s:i for i,s in enumerate(SENTIMENT_ORDER)}
+    counts = counts.sort_values(key=lambda s: s.map(order_index) if s.name=="sentiment" else s)
+    return counts
 
 def _prep_brand_sentiment_counts(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Conteos por (brand, sentiment) para comparación y diagnósticos.
-    """
     if df.empty or not {"brand", "sentiment"}.issubset(df.columns):
         return pd.DataFrame(columns=["brand", "sentiment", "count"])
     g = (df.groupby(["brand", "sentiment"]).size().reset_index(name="count"))
     g = g[g["sentiment"].isin(SENTIMENT_ORDER)]
-    g["sentiment"] = pd.Categorical(g["sentiment"], SENTIMENT_ORDER, True)
-    g["brand"] = pd.Categorical(g["brand"], BRAND_ORDER, True)
     g["count"] = pd.to_numeric(g["count"], errors="coerce").fillna(0).astype(int)
-    return g.sort_values(["sentiment", "brand"])
+    # reordena
+    s_idx = {s:i for i,s in enumerate(SENTIMENT_ORDER)}
+    b_idx = {b:i for i,b in enumerate(BRAND_ORDER)}
+    g = g.sort_values(by=["sentiment","brand"], key=lambda col:
+                      col.map(s_idx) if col.name=="sentiment" else col.map(b_idx))
+    return g
 
+# ---------- AQUI EL CAMBIO CLAVE ----------
 def create_sentiment_pie(data: pd.DataFrame, brand_name: str):
+    """
+    Construye el pie pasando listas explícitas (names/values) para evitar que
+    Plotly/serialización ignore la columna 'count'.
+    """
     counts = _prep_counts(data)
     if counts.empty:
         return px.pie(title=f"Sin Datos de Sentimiento para {brand_name}")
+
+    names_list = counts["sentiment"].astype(str).tolist()
+    values_list = counts["count"].astype(float).tolist()  # float por seguridad en versiones antiguas
+
     fig = px.pie(
-        counts,
-        names="sentiment",
-        values="count",
+        names=names_list,
+        values=values_list,
         title=f"Sentimiento para {brand_name} (Modelo AutoML)",
+        color=names_list,  # asegura el mapping por nombre
         color_discrete_map={"Positive": "#2ca02c", "Negative": "#d62728", "Neutral": "#7f7f7f"},
     )
     fig.update_traces(textinfo="label+percent", hovertemplate="%{label}: %{value} (%{percent})")
+
+    # DEBUG: imprime los valores que realmente está usando el trace
+    try:
+        print(f"[DEBUG] PIE {brand_name} values:", fig.data[0]["values"])
+        print(f"[DEBUG] PIE {brand_name} labels:", fig.data[0]["labels"])
+    except Exception as _e:
+        print(f"[DEBUG] No se pudo leer values/labels del pie ({brand_name}):", _e)
+
     return fig
+# ------------------------------------------
 
 def create_compare_bar(data: pd.DataFrame):
     g = _prep_brand_sentiment_counts(data)
@@ -153,11 +167,9 @@ def load_data():
             except Exception as _e:
                 print("[DEBUG] os.path.getsize error:", _e)
         df = _read_csv_safe(AUTOML_RESULTS_PATH)
-        # --- Normaliza (incluye mapeo agresivo de brand) ---
         df = _normalize_df(df)
 
         print("[DEBUG] shape post-normalization:", df.shape)
-        # Diagnóstico rápido a logs
         if set(["brand", "sentiment"]).issubset(df.columns):
             print("[DEBUG] brand x sentiment:\n",
                   df.groupby(["brand", "sentiment"]).size().reset_index(name="count").to_string(index=False))
@@ -284,7 +296,6 @@ with gr.Blocks(theme=custom_theme, css=custom_css, title="Resultados del Pipelin
         intel_plot = gr.Plot(label="Intel")
         amd_plot   = gr.Plot(label="AMD")
 
-    # NUEVO: tablas de conteos exactos que alimentan cada pie
     with gr.Row():
         intel_counts_tbl = gr.DataFrame(label="Conteos (Intel) usados por el gráfico")
         amd_counts_tbl   = gr.DataFrame(label="Conteos (AMD) usados por el gráfico")
