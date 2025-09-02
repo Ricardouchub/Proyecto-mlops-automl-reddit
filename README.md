@@ -4,9 +4,10 @@
   <img src="https://img.shields.io/badge/Estado-Operativo-2ECC71?style=flat-square&logo=checkmarx&logoColor=white" alt="Estado: Operativo"/>
   <img src="https://img.shields.io/badge/Python-3.11-3776AB?style=flat-square&logo=python&logoColor=white" alt="Python 3.11"/>
   <img src="https://img.shields.io/badge/Reddit_API-Fuente_de_Datos-FF4500?style=flat-square&logo=reddit&logoColor=white" alt="Reddit API"/>
-  <img src="https://img.shields.io/github/actions/workflow/status/Ricardouchub/proyecto-mlops-reddit/pipeline.yml?style=flat-square&logo=githubactions&logoColor=white&label=CI%2FCD" alt="CI/CD"/>
+  <img src="https://img.shields.io/github/actions/workflow/status/Ricardouchub/proyecto-mlops-reddit/.github/workflows/extract_data_schedule.yml?style=flat-square&logo=githubactions&logoColor=white&label=CI%2FCD" alt="CI/CD"/>
   <img src="https://img.shields.io/badge/Plotly-Visualizacion-3F4F75?style=flat-square&logo=plotly&logoColor=white" alt="Plotly"/>
   <img src="https://img.shields.io/badge/AutoML-Clasificador-00C853?style=flat-square" alt="AutoML"/>
+  <img src="https://img.shields.io/badge/Render-Despliegue-46E3B7?style=flat-square&logo=render&logoColor=white" alt="Render"/>
 </p>
 
 
