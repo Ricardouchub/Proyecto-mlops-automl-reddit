@@ -1,62 +1,61 @@
-# Pipeline de MLOps para Análisis de Sentimiento en Tiempo Real
+#  Pipeline de MLOps para Análisis de Sentimiento en Tiempo Real: Intel vs. AMD en Reddit
 
-### Análisis Competitivo Automatizado: Intel vs. AMD en Reddit
 
-**[➡️ Ver Demo en Vivo](https://analisis-intel-amd.onrender.com/)**
+**[Ver Demo en Vivo](https://proyecto-mlops-reddit.onrender.com)** 
 
 ---
 
-Este proyecto demuestra la construcción de un **pipeline de MLOps de extremo a extremo**, diseñado para ser completamente autónomo. El sistema extrae datos en vivo desde la API de Reddit, los procesa utilizando múltiples modelos de NLP, entrena un modelo de Machine Learning propio con AutoML, y despliega los resultados en un dashboard interactivo que se actualiza automáticamente.
+Este proyecto demuestra la construcción de un **pipeline de MLOps de extremo a extremo**, diseñado para ser completamente autónomo. El sistema extrae datos en vivo desde la API de Reddit, los procesa, entrena un modelo de Machine Learning propio con AutoML y despliega los resultados en un dashboard interactivo que se actualiza automáticamente.
 
 ## Características Principales
 
 * **Extracción de Datos Automatizada:** Un bot se conecta diariamente a Reddit para recolectar nuevos comentarios sobre Intel y AMD.
-* **Procesamiento Avanzado de NLP:** Cada comentario es enriquecido con un análisis multifacético:
-    * **Sentimiento:** Positivo, Negativo o Neutral.
-    * **Emociones:** Alegría, Ira, Miedo, etc.
-    * **Modelado de Tópicos:** Descubrimiento de los principales temas de conversación.
-* **Entrenamiento con AutoML y GPU:** Se entrena un modelo de clasificación desde cero utilizando **PyCaret**, con la opción de aceleración por GPU.
-* **Dashboard Comparativo:** Una interfaz interactiva construida con **Gradio** que permite comparar el rendimiento del modelo propio (AutoML) contra un modelo experto de última generación (RoBERTa).
-* **Orquestación con GitHub Actions:** Múltiples pipelines de CI/CD que automatizan todo el flujo, desde la extracción de datos hasta el re-entrenamiento del modelo.
-* **Despliegue Continuo (CI/CD) en Render:** La aplicación está conectada al repositorio de GitHub, desplegándose automáticamente con cada nueva actualización del modelo.
+* **Procesamiento Avanzado de NLP:** Cada comentario es etiquetado automáticamente con Sentimiento y Emociones usando un modelo Transformer pre-entrenado.
+* **Entrenamiento con AutoML y GPU:** Se entrena un modelo de clasificación desde cero utilizando **PyCaret**, demostrando un pipeline de entrenamiento automatizado que puede ser acelerado por GPU.
+* **Dashboard Interactivo:** Una interfaz construida con **Gradio** que visualiza los resultados del modelo entrenado, permitiendo filtrar y explorar los datos.
+* **Orquestación con GitHub Actions:** Múltiples pipelines de CI/CD que automatizan todo el flujo, desde la extracción de datos hasta el re-entrenamiento del modelo y la generación de resultados.
+* **Despliegue Continuo (CI/CD) en Render:** La aplicación está conectada al repositorio de GitHub, desplegándose automáticamente con cada nueva actualización.
 
-## El Pipeline de MLOps en Acción
+---
+##  El Pipeline de MLOps en Acción
 
-Este proyecto es un **sistema vivo y autónomo**. La magia reside en la orquestación de workflows de GitHub Actions que trabajan en conjunto:
+Este proyecto es un sistema vivo y autónomo. La magia reside en la **orquestación de workflows de GitHub Actions** que trabajan en conjunto:
 
-#### **Bot 1: El Extractor de Datos (Diario)**
+#### **Bot 1: Extractor de Datos Diario**
 
 * **Activación:** Se ejecuta automáticamente todos los días a las 05:00 UTC.
 * **Misión:**
-    1.  Ejecuta el script `extract_reddit_data.py`.
-    2.  Se conecta a la API de Reddit y busca nuevos comentarios sobre Intel y AMD.
-    3.  Actualiza el archivo `data/reddit_comments.csv`.
-    4.  Hace `commit` y `push` del archivo actualizado al repositorio, **activando el siguiente bot**.
+    1. Ejecuta el script `extract_reddit_data.py`.
+    2. Se conecta a la API de Reddit y busca nuevos comentarios sobre Intel y AMD.
+    3. Actualiza el archivo de datos crudos `data/reddit_comments.csv`.
+    4. Hace `commit` y `push` del archivo actualizado al repositorio, **activando el siguiente bot**.
 
-#### **Bot 2: El Procesador y Entrenador (Reactivo)**
+#### **Bot 2: Procesador y Entrenador**
 
 * **Activación:** Se dispara automáticamente cuando el Bot 1 termina con éxito.
-* **Arquitectura:** Para solucionar el problema de `No space left on device` en los runners de GitHub, este pipeline se divide en **dos trabajos secuenciales y especializados**:
+* **Arquitectura:** Para solucionar problemas de memoria (`No space left on device`), este pipeline se divide en **dos trabajos secuenciales**:
     1.  **Job `process-data`:**
-        * Instala **solo** las librerías de NLP y ejecuta `nlp_processor.py` para enriquecer los datos.
+        * Instala las librerías de NLP y ejecuta `nlp_processor.py` para enriquecer los datos (sentimiento, emociones, etc.).
         * Guarda los datos procesados como un "artefacto" temporal.
     2.  **Job `train-model`:**
         * Descarga el artefacto del job anterior.
-        * Instala **solo** las librerías de AutoML y ejecuta `python_train.py` para entrenar el modelo.
-        * Hace `commit` y `push` del modelo final (`.pkl`) y el gráfico de importancia al repositorio, **activando el despliegue en Render.**
+        * Instala las librerías de AutoML y ejecuta `python_train.py`. Este script entrena el modelo y, crucialmente, **genera el archivo de resultados `data/automl_results.csv`**.
+        * Hace `commit` y `push` de todos los artefactos finales (el modelo `.pkl`, la info del modelo `.txt` y los resultados `.csv`), **activando el despliegue en Render.**
 
-## La Historia: AutoML vs. Modelo Experto
+---
+## Conclusiones del Modelo AutoML
 
-Uno de los hallazgos clave de este proyecto es la comparación directa entre un modelo entrenado por nosotros y un modelo pre-entrenado de última generación.
+El objetivo de este proyecto es demostrar un pipeline funcional, y los resultados del entrenamiento son un hallazgo clave. A pesar de la complejidad y el "ruido" del lenguaje de Reddit, el modelo AutoML logró un rendimiento moderado, demostrando que ha aprendido patrones reales en los datos.
 
-* **Nuestro Modelo (AutoML):** Como se ve en el dashboard, el modelo entrenado con PyCaret logra un rendimiento moderado, demostrando que ha aprendido patrones reales pero que el lenguaje de Reddit es un desafío complejo.
+**Resultados del Mejor Modelo (ExtraTreesClassifier):**
+* **Accuracy:** `0.5884`
+* **AUC:** `0.7435`
+* **Kappa:** `0.2786` 
 
-    **Resultados del Mejor Modelo (ExtraTreesClassifier):**
-    * **Accuracy:** `0.5884` (significativamente mejor que el azar del 33%).
-    * **AUC:** `0.7435` (buena capacidad para discriminar entre clases).
-    * **Kappa:** `0.2786` (rendimiento bajo-moderado por encima del azar).
+Estos resultados realistas son una excelente demostración de un problema de NLP del mundo real. Muestran que, si bien el modelo tiene poder predictivo, hay un amplio margen de mejora, lo que justifica la existencia del pipeline para re-entrenar y mejorar el modelo a medida que se recolectan más datos.
 
-* **Modelo Experto (RoBERTa):** Para el análisis principal en el dashboard, se utiliza un modelo Transformer pre-entrenado (`cardiffnlp/twitter-roberta-base-sentiment-latest`), que ofrece una precisión muy superior al entender el contexto profundo del lenguaje.
+---
+## Autor
 
-Esta comparación no es un fallo, sino la **demostración de un proceso de MLOps maduro**: saber experimentar, analizar resultados y elegir la mejor herramienta para el producto final.
+**Ricardo Urdnaeta**
 
