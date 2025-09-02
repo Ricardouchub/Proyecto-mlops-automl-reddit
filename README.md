@@ -1,11 +1,24 @@
 #  Pipeline de MLOps para Análisis de Sentimiento en Tiempo Real: Intel vs. AMD en Reddit
 
+<p align="left">
+  <img src="https://img.shields.io/badge/Estado-Operativo-2ECC71?style=flat-square&logo=checkmarx&logoColor=white" alt="Estado: Operativo"/>
+  <img src="https://img.shields.io/badge/Python-3.11-3776AB?style=flat-square&logo=python&logoColor=white" alt="Python 3.11"/>
+  <img src="https://img.shields.io/badge/Reddit_API-Fuente_de_Datos-FF4500?style=flat-square&logo=reddit&logoColor=white" alt="Reddit API"/>
+  <img src="https://img.shields.io/github/actions/workflow/status/Ricardouchub/proyecto-mlops-reddit/pipeline.yml?style=flat-square&logo=githubactions&logoColor=white&label=CI%2FCD" alt="CI/CD"/>
+  <img src="https://img.shields.io/badge/Plotly-Visualizacion-3F4F75?style=flat-square&logo=plotly&logoColor=white" alt="Plotly"/>
+  <img src="https://img.shields.io/badge/AutoML-Clasificador-00C853?style=flat-square" alt="AutoML"/>
+</p>
+
+
+Construcción de un **pipeline de MLOps de extremo a extremo**, diseñado para ser completamente autónomo. 
+
+El sistema extrae datos en vivo desde la API de Reddit, los procesa, entrena un modelo de Machine Learning propio con AutoML y despliega los resultados en un dashboard interactivo que se actualiza automáticamente.
+
 
 **[Dashboard de Resultados](https://proyecto-mlops-reddit.onrender.com)** 
 
 ---
 
-Este proyecto demuestra la construcción de un **pipeline de MLOps de extremo a extremo**, diseñado para ser completamente autónomo. El sistema extrae datos en vivo desde la API de Reddit, los procesa, entrena un modelo de Machine Learning propio con AutoML y despliega los resultados en un dashboard interactivo que se actualiza automáticamente.
 
 ## Características Principales
 
