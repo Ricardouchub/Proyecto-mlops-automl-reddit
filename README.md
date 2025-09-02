@@ -31,7 +31,7 @@ El sistema extrae datos en vivo desde la API de Reddit, los procesa, entrena un 
 * **Despliegue Continuo (CI/CD) en Render:** La aplicación está conectada al repositorio de GitHub, desplegándose automáticamente con cada nueva actualización.
 
 ---
-##  El Pipeline de MLOps en Acción
+##  Pipeline de MLOps en Acción
 
 Este proyecto es un sistema vivo y autónomo. La magia reside en la **orquestación de workflows de GitHub Actions** que trabajan en conjunto:
 
