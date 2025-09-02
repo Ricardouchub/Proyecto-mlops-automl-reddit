@@ -1,7 +1,7 @@
 #  Pipeline de MLOps para Análisis de Sentimiento en Tiempo Real: Intel vs. AMD en Reddit
 
 
-**[Ver Demo en Vivo](https://proyecto-mlops-reddit.onrender.com)** 
+**[Dashboard de Resultados](https://proyecto-mlops-reddit.onrender.com)** 
 
 ---
 
