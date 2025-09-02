@@ -3,14 +3,14 @@ import pandas as pd
 import plotly.graph_objects as go
 import gradio as gr
 
-# --- Config mínima ---
+# --- Config ---
 AUTOML_RESULTS_PATH = "data/automl_results.csv"
 MODEL_INFO_PATH     = "models/model_info.txt"
 SENTIMENTS          = ["Positive", "Neutral", "Negative"]
 BRANDS              = ["Intel", "AMD"]
 PALETTE             = {"Positive": "#2ca02c", "Neutral": "#7f7f7f", "Negative": "#d62728"}
 
-# --- Carga simple del CSV ---
+# --- Carga CSV ---
 try:
     try:
         df = pd.read_csv(AUTOML_RESULTS_PATH, encoding="utf-8")
@@ -20,14 +20,12 @@ except Exception as e:
     print(f"[ERROR] No pude leer {AUTOML_RESULTS_PATH}: {e}")
     df = pd.DataFrame(columns=["brand", "text", "sentiment"])
 
-# --- Normalización mínima (solo Intel/AMD y 3 sentimientos) ---
+# --- Normalización ---
 if not df.empty:
-    # Marcas: solo Intel/AMD (case-insensitive). Descarto el resto.
     m = {"intel": "Intel", "amd": "AMD"}
     df["brand"] = df["brand"].astype(str).str.strip().str.casefold().map(m)
     df = df[df["brand"].isin(BRANDS)]
 
-    # Sentimientos: acepto equivalentes en español y dejo solo 3 etiquetas finales
     df["sentiment"] = (
         df["sentiment"].astype(str).str.strip().str.lower()
         .replace({
@@ -40,7 +38,7 @@ if not df.empty:
     )
     df = df[df["sentiment"].isin(SENTIMENTS)]
 
-# --- Callback único de Gradio ---
+# --- Callback ---
 def update_dashboard(brand_filter, sentiment_filter):
     if df.empty:
         empty = pd.DataFrame(columns=["Marca", "Comentario", "Sentimiento (AutoML)"])
@@ -117,7 +115,7 @@ def update_dashboard(brand_filter, sentiment_filter):
 
     return fig_intel, fig_amd, bar, table
 
-# --- UI sencilla ---
+# --- UI ---
 custom_theme = gr.themes.Base(
     font=[gr.themes.GoogleFont("Inter"), "Arial", "sans-serif"]
 ).set(
@@ -131,7 +129,7 @@ custom_theme = gr.themes.Base(
 )
 
 with gr.Blocks(theme=custom_theme, title="Resultados del Pipeline de AutoML") as demo:
-    gr.Markdown("<h1>📊 Resultados del Pipeline de AutoML</h1>")
+    gr.Markdown("<h1>Resultados del Pipeline de AutoML</h1>")
     gr.Markdown("<p>Análisis de sentimiento utilizando nuestro modelo propio, entrenado y desplegado automáticamente con un pipeline de MLOps.</p>")
 
     with gr.Row():
