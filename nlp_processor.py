@@ -11,7 +11,6 @@ import os
 
 DATA_FOLDER = "data"
 
-# Descargar recursos necesarios de NLTK la primera vez
 try:
     stopwords.words('english')
 except LookupError:
