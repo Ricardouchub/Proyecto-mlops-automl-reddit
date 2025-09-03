@@ -45,7 +45,6 @@ def train_and_predict():
     save_model(final_model, MODEL_PATH)
     print(f"Modelo guardado en '{MODEL_PATH}.pkl'")
     
-    # --- ¡NUEVO! Guardar la descripción del modelo en un .txt ---
     with open(MODEL_INFO_PATH, "w") as f:
         f.write(f"Mejor modelo encontrado por AutoML: <pre>{str(final_model.steps[-1][1])}</pre>")
     print(f"Información del modelo guardada en '{MODEL_INFO_PATH}'")
