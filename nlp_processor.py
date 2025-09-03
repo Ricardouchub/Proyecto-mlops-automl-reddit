@@ -20,12 +20,10 @@ except LookupError:
     nltk.download('omw-1.4')
     print("Recursos descargados.")
 
-# Configuración de Modelos
 SENTIMENT_MODEL = "cardiffnlp/twitter-roberta-base-sentiment-latest"
 EMOTION_MODEL = "j-hartmann/emotion-english-distilroberta-base"
 NER_MODEL = "dslim/bert-base-NER"
 
-# Funciones de Análisis (sin cambios en su lógica interna)
 def analyze_sentiment_emotion(df):
     print("1. Analizando Sentimiento y Emociones...")
     device = 0 if torch.cuda.is_available() else -1
@@ -38,12 +36,10 @@ def analyze_sentiment_emotion(df):
 
     comments = df['text'].dropna().astype(str).tolist()
     
-    # Sentimiento
     sentiments = sentiment_pipeline(comments, truncation=True, max_length=512)
     sentiment_map = {text: res['label'].capitalize() for text, res in zip(comments, sentiments)}
     df['sentiment'] = df['text'].map(sentiment_map)
     
-    # Emociones
     emotions = emotion_pipeline(comments, truncation=True, max_length=512)
     emotion_map = {text: res['label'].capitalize() for text, res in zip(comments, emotions)}
     df['emotion'] = df['text'].map(emotion_map)
