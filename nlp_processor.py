@@ -9,7 +9,6 @@ from nltk.stem import WordNetLemmatizer
 from collections import Counter
 import os
 
-# --- CAMBIO: Definir la carpeta de datos ---
 DATA_FOLDER = "data"
 
 # Descargar recursos necesarios de NLTK la primera vez
@@ -30,8 +29,6 @@ NER_MODEL = "dslim/bert-base-NER"
 # Funciones de Análisis (sin cambios en su lógica interna)
 def analyze_sentiment_emotion(df):
     print("1. Analizando Sentimiento y Emociones...")
-    # --- ¡CAMBIO CLAVE! ---
-    # Asigna automáticamente la GPU (cuda:0) si está disponible, si no, usa la CPU.
     device = 0 if torch.cuda.is_available() else -1
     if device == 0:
         print("   - GPU detectada. Usando CUDA para la aceleración.")
@@ -110,11 +107,10 @@ def discover_topics(df):
     print("   ...Modelado de Tópicos completado.")
     return df, topic_keywords
 
-# --- Ejecución Principal ---
+# Lógica Principal del Pipeline
 if __name__ == "__main__":
     print("Iniciando pipeline de procesamiento de NLP...")
     
-    # --- CAMBIO: Usar la ruta correcta para leer y escribir ---
     input_path = os.path.join(DATA_FOLDER, "reddit_comments.csv")
     output_processed_path = os.path.join(DATA_FOLDER, "processed_reddit_data.csv")
     output_topics_path = os.path.join(DATA_FOLDER, "topic_keywords.csv")
