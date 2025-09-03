@@ -102,3 +102,5 @@ Estos resultados realistas son una excelente demostración de un problema de NLP
 
 **Ricardo Urdnaeta**
 
+[**LinkedIn**](https://www.linkedin.com/in/ricardourdanetacastro/)
+
