@@ -71,7 +71,26 @@ Estos resultados realistas son una excelente demostración de un problema de NLP
 
 ---
 
-<img width="1063" height="456" alt="image" src="https://github.com/user-attachments/assets/08bc7e10-9c96-457c-8501-35b496716aed" />
+## Estructura del Proyecto
+
+```bash
+├── .github/workflows/         # Contiene los pipelines de GitHub Actions
+│   ├── extract_data_schedule.yml
+│   └── process_and_train.yml
+├── data/                      # Almacena los datasets generados
+│   ├── reddit_comments.csv
+│   ├── processed_reddit_data.csv
+│   └── automl_results.csv
+├── models/                    # Almacena los artefactos del modelo
+│   ├── sentiment_model_v2.pkl
+│   └── model_info.txt
+├── .gitignore                 
+├── app.py                     # El código del dashboard de Gradio
+├── extract_reddit_data.py     # Script para extraer datos de Reddit
+├── nlp_processor.py           # Script para el análisis NLP de los datos
+├── python_train.py            # Script para el entrenamiento y la predicción con AutoML
+└── requirements.txt           # Lista de dependencias de Python
+```
 
 ---
 ## Autor
