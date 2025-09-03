@@ -1,4 +1,4 @@
-#  Pipeline de MLOps para Análisis de Sentimiento en Tiempo Real: Intel vs. AMD en Reddit
+#   MLOps y AutoML: Pipeline de Análisis de Sentimiento para comparar Intel vs. AMD
 
 <p align="left">
   <img src="https://img.shields.io/badge/Estado-Operativo-2ECC71?style=flat-square&logo=checkmarx&logoColor=white" alt="Estado: Operativo"/>
@@ -67,6 +67,11 @@ El objetivo de este proyecto es demostrar un pipeline funcional, y los resultado
 * **Kappa:** `0.2786` 
 
 Estos resultados realistas son una excelente demostración de un problema de NLP del mundo real. Muestran que, si bien el modelo tiene poder predictivo, hay un amplio margen de mejora, lo que justifica la existencia del pipeline para re-entrenar y mejorar el modelo a medida que se recolectan más datos.
+
+
+---
+
+<img width="1063" height="456" alt="image" src="https://github.com/user-attachments/assets/08bc7e10-9c96-457c-8501-35b496716aed" />
 
 ---
 ## Autor
