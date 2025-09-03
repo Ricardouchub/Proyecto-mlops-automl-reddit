@@ -16,7 +16,13 @@ Construcción de un **pipeline de MLOps de extremo a extremo**, diseñado para s
 El sistema extrae datos en vivo desde la API de Reddit, los procesa, entrena un modelo de Machine Learning propio con **AutoML** y despliega los resultados en un dashboard interactivo que se actualiza automáticamente.
 
 
-**[Resultados del Modelo AutoML](https://proyecto-mlops-reddit.onrender.com)** 
+<div align="center">
+  <a href="https://proyecto-mlops-reddit.onrender.com">
+    <h3>Resultados del Modelo AutoML</h3>
+  </a>
+  <img src="https://github.com/user-attachments/assets/1f6352af-a207-48af-b833-55f444e11805" alt="Resultados del modelo" width="561" />
+</div>
+
 
 ---
 
