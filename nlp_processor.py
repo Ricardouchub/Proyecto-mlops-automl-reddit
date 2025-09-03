@@ -106,7 +106,6 @@ def discover_topics(df):
     print("   ...Modelado de Tópicos completado.")
     return df, topic_keywords
 
-# Lógica Principal del Pipeline
 if __name__ == "__main__":
     print("Iniciando pipeline de procesamiento de NLP...")
     
