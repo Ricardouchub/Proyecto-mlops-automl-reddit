@@ -15,19 +15,18 @@ Construcción de un **pipeline de MLOps de extremo a extremo**, diseñado para s
 
 El sistema extrae datos en vivo desde la API de Reddit, los procesa, entrena un modelo de Machine Learning propio con **AutoML** y despliega los resultados en un dashboard interactivo que se actualiza automáticamente.
 
-
 <div align="center">
-  <a href="https://proyecto-mlops-reddit.onrender.com">
-    <h3>Resultados del Modelo AutoML</h3>
-  </a>
-  <img src="https://github.com/user-attachments/assets/1f6352af-a207-48af-b833-55f444e11805" alt="Resultados del modelo" width="561" />
-</div>
 
+[Resultados del Modelo AutoML](https://proyecto-mlops-reddit.onrender.com)
+
+<img width="570" height="499" alt="image" src="https://github.com/user-attachments/assets/007d5df5-7aa5-4810-9040-577a0c8f5a58" />
+
+</div>
 
 ---
 
 
-## Características Principales
+## Características
 
 * **Extracción de Datos Automatizada:** Un bot se conecta diariamente a Reddit para recolectar nuevos comentarios sobre Intel y AMD.
 * **Procesamiento Avanzado de NLP:** Cada comentario es etiquetado automáticamente con Sentimiento y Emociones usando un modelo Transformer pre-entrenado.
@@ -37,7 +36,7 @@ El sistema extrae datos en vivo desde la API de Reddit, los procesa, entrena un 
 * **Despliegue Continuo (CI/CD) en Render:** La aplicación está conectada al repositorio de GitHub, desplegándose automáticamente con cada nueva actualización.
 
 ---
-##  Pipeline de MLOps en Acción
+##  Pipeline de MLOps
 
 Este proyecto es un sistema vivo y autónomo. La magia reside en la **orquestación de workflows de GitHub Actions** que trabajan en conjunto:
 
