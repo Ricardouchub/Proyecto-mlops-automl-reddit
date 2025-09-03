@@ -4,10 +4,8 @@ import pandas as pd
 from dotenv import load_dotenv
 import datetime
 
-# Cargar las variables de entorno
 load_dotenv()
 
-# --- Configuración ---
 CLIENT_ID = os.getenv("REDDIT_CLIENT_ID")
 CLIENT_SECRET = os.getenv("REDDIT_CLIENT_SECRET")
 USER_AGENT = os.getenv("REDDIT_USER_AGENT")
@@ -20,12 +18,10 @@ SEARCH_TERMS = {
 SUBREDDITS = ['hardware', 'buildapc', 'pcmasterrace', 'AMD', 'Intel']
 POST_LIMIT = 15
 
-# --- ¡CAMBIO! Se define la nueva ruta de guardado ---
 OUTPUT_FOLDER = "data"
 OUTPUT_CSV_NAME = "reddit_comments.csv"
 OUTPUT_CSV_PATH = os.path.join(OUTPUT_FOLDER, OUTPUT_CSV_NAME)
 
-# --- Lógica del Script (sin cambios en la extracción) ---
 def fetch_reddit_data():
     print("Conectando a la API de Reddit...")
     try:
@@ -79,14 +75,11 @@ def save_data(df):
     df.to_csv(OUTPUT_CSV_PATH, index=False)
     print("Archivo guardado con éxito.")
 
-# --- Ejecución Principal ---
 if __name__ == "__main__":
-    # --- ¡CAMBIO! Asegurarse de que la carpeta de datos exista ---
     if not os.path.exists(OUTPUT_FOLDER):
         os.makedirs(OUTPUT_FOLDER)
         print(f"Carpeta '{OUTPUT_FOLDER}' creada.")
 
-    # Eliminar el archivo viejo para empezar de cero
     if os.path.exists(OUTPUT_CSV_PATH):
         os.remove(OUTPUT_CSV_PATH)
         print(f"Archivo antiguo '{OUTPUT_CSV_PATH}' eliminado.")
