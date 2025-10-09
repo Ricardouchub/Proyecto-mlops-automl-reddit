@@ -1,4 +1,4 @@
-#   MLOps y AutoML: Pipeline de Análisis de Sentimiento para comparar Intel vs. AMD
+# AutoML: Pipeline de Análisis de Sentimiento para comparar Intel vs. AMD
 
 <p align="left">
   <img src="https://img.shields.io/badge/Estado-Operativo-2ECC71?style=flat-square&logo=checkmarx&logoColor=white" alt="Estado: Operativo"/>
